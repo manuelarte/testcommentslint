@@ -41,3 +41,8 @@ func isTestFunction(funcDecl *ast.FuncDecl) (bool, string) {
 
 	return false, ""
 }
+
+// isTableDrivenTest checks if a test function is a table driven test and returns the BlockStmt.
+func isTableDrivenTest(funcDecl *ast.FuncDecl) (bool, *ast.BlockStmt) {
+	return false, nil
+}

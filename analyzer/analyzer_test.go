@@ -11,9 +11,10 @@ func TestAnalyzer(t *testing.T) {
 
 	testCases := map[string]struct {
 		patterns string
+		options  map[string]string
 	}{
-		"default": {
-			patterns: "simple",
+		"equality comparison": {
+			patterns: "equality_comparison",
 		},
 	}
 
@@ -22,6 +23,13 @@ func TestAnalyzer(t *testing.T) {
 			t.Parallel()
 
 			a := New()
+
+			for k, v := range test.options {
+				err := a.Flags.Set(k, v)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
 
 			analysistest.Run(t, analysistest.TestData(), a, test.patterns)
 		})
