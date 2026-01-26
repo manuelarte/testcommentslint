@@ -16,4 +16,30 @@ go install github.com/manuelarte/testcommentslint@latest
 
 ## 🚀 Features
 
-Explain features
+### [Compare Full Structures](https://go.dev/wiki/TestComments#compare-full-structures)
+
+TODO(manuelarte): Think about this
+
+### [Equality Comparison and Diffs](https://go.dev/wiki/TestComments#equality-comparison-and-diffs)
+
+TODO(manuelarte): You will find older code using the standard `reflect.DeepEqual` function to compare complex structures.
+Prefer `cmp` for new code.
+
+### [Got before Want](https://go.dev/wiki/TestComments#got-before-want)
+
+Test outputs should output the actual value that the function returned before printing the value that was expected.
+A usual format for printing test outputs is `YourFunc(%v) = %v, want %v`.
+
+### [Identify the Input](https://go.dev/wiki/TestComments#identify-the-input)
+
+In most tests, your test failure messages should include the function inputs if they are short.
+If the relevant properties of the inputs are not obvious (for example, because the inputs are large or opaque),
+you should name your test cases with a description of what’s being tested and print the description as part of your error message.
+
+Do not use the index of the test in the test table as a substitute for naming your tests or printing the inputs.
+Nobody wants to go through your test table and count the entries to figure out which test case is failing.
+
+### [Print Diffs](https://go.dev/wiki/TestComments#print-diffs)
+
+If your function returns large output, then it can be hard for someone reading the failure message to find the differences when your test fails.
+Instead of printing both the returned value and the wanted value, make a diff.
