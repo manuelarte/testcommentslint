@@ -7,6 +7,8 @@ import (
 )
 
 func TestAnalyzer(t *testing.T) {
+	t.Parallel()
+
 	testCases := map[string]struct {
 		patterns string
 	}{
@@ -17,6 +19,8 @@ func TestAnalyzer(t *testing.T) {
 
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			a := New()
 
 			analysistest.Run(t, analysistest.TestData(), a, test.patterns)
