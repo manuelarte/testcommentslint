@@ -1,19 +1,12 @@
-package astutils
+package model
 
 import (
 	"go/ast"
 	"strings"
 )
 
-// IsTestFunction checks if a function declaration is a test function
-// A test function must:
-// 1. Start with "Test"
-// 2. Have exactly one parameter
-// 3. Have that parameter be of type *testing.T
-// Returns (true, paramName) if it is a test function, (false, "") if it isn't.
-//
 //nolint:nestif // no need
-func IsTestFunction(funcDecl *ast.FuncDecl) (bool, string) {
+func isTestFunction(funcDecl *ast.FuncDecl) (bool, string) {
 	testMethodPackageType := "testing"
 	testMethodStruct := "T"
 	testPrefix := "Test"
@@ -42,15 +35,10 @@ func IsTestFunction(funcDecl *ast.FuncDecl) (bool, string) {
 	return false, ""
 }
 
-// IsTableDrivenTest checks if a test function is a table driven test and returns the BlockStmt.
+// isTableDrivenTest checks if a test function is a table driven test and returns the BlockStmt.
 //
 //nolint:gocognit // refactor later
-func IsTableDrivenTest(funcDecl *ast.FuncDecl) (bool, *ast.BlockStmt) {
-	isTestFunction, testVar := IsTestFunction(funcDecl)
-	if !isTestFunction {
-		return false, nil
-	}
-
+func isTableDrivenTest(funcDecl *ast.FuncDecl) (bool, *ast.BlockStmt) {
 	identifiers := make(map[string]struct{})
 
 	var stmts []ast.Stmt
@@ -112,7 +100,7 @@ func IsTableDrivenTest(funcDecl *ast.FuncDecl) (bool, *ast.BlockStmt) {
 				continue
 			}
 
-			if ident, isIdent := selectorExpr.X.(*ast.Ident); isIdent && ident.Name != testVar {
+			if ident, isIdent := selectorExpr.X.(*ast.Ident); isIdent && ident.Name != "t" {
 				continue
 			}
 

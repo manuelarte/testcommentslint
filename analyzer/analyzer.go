@@ -10,7 +10,7 @@ import (
 	"golang.org/x/tools/go/ast/inspector"
 
 	"github.com/manuelarte/testcommentslint/analyzer/checks"
-	"github.com/manuelarte/testcommentslint/astutils"
+	"github.com/manuelarte/testcommentslint/analyzer/model"
 )
 
 const (
@@ -50,46 +50,33 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 		(*ast.FuncDecl)(nil),
 	}
 
-	reflectPath := "reflect"
+	var reflectImport *model.ReflectImport
 
 	insp.Preorder(nodeFilter, func(n ast.Node) {
 		// Only process _test.go files
 		if !strings.HasSuffix(pass.Fset.File(n.Pos()).Name(), "_test.go") {
+			reflectImport = nil
+
 			return
 		}
 
 		switch node := n.(type) {
 		case *ast.ImportSpec:
-			if node.Path != nil && node.Path.Value == "\"reflect\"" {
-				if node.Name != nil {
-					reflectPath = node.Name.Name
-				}
+			if rf, ok := model.NewReflectImport(node); ok {
+				reflectImport = rf
 			}
 		case *ast.FuncDecl:
-			ok, testVar := astutils.IsTestFunction(node)
+			testFunc, ok := model.NewTestFunction(reflectImport, node)
 			if !ok {
 				return
 			}
 
-			var check *checks.EqualityComparisonCheck
 			if l.equalityComparison {
-				check = checks.NewEqualityComparisonCheck(testVar, reflectPath)
+				checks.NewEqualityComparisonCheck().Check(pass, testFunc)
 			}
-
-			l.analyzeTestFunction(pass, node, check)
 		}
 	})
 
 	//nolint:nilnil //any, error
 	return nil, nil
-}
-
-func (l *testcommentslint) analyzeTestFunction(
-	pass *analysis.Pass,
-	funcDecl *ast.FuncDecl,
-	check *checks.EqualityComparisonCheck,
-) {
-	if check != nil {
-		check.Check(pass, funcDecl)
-	}
 }

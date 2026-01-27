@@ -1,4 +1,4 @@
-package astutils
+package model
 
 import (
 	"go/ast"
@@ -92,10 +92,10 @@ func TestExample(t *testing.T) {
 			if err != nil {
 				t.Fatalf("error parsing file: %v", err)
 			}
-			// Walk through the AST
+
 			ast.Inspect(node, func(n ast.Node) bool {
 				if funcDecl, ok := n.(*ast.FuncDecl); ok {
-					got, _ := IsTableDrivenTest(funcDecl)
+					got, _ := isTableDrivenTest(funcDecl)
 					if got != tc.want {
 						t.Errorf("IsTableDrivenTest() got %v, want %v", got, tc.want)
 					}

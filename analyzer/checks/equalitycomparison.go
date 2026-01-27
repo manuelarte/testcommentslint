@@ -1,46 +1,42 @@
 package checks
 
 import (
+	"fmt"
 	"go/ast"
 
 	"golang.org/x/tools/go/analysis"
+
+	"github.com/manuelarte/testcommentslint/analyzer/model"
 )
 
 // EqualityComparisonCheck checks that reflect.DeepEqual can be replaced by newer cmp.Equal.
-type EqualityComparisonCheck struct {
-	// testVar is the identifier given for the testing.T parameter in the test function.
-	testVar string
-	// reflectImportName is the import name of the reflect package.
-	reflectImportName string
+type EqualityComparisonCheck struct{}
+
+// NewEqualityComparisonCheck creates a new EqualityComparisonCheck.
+func NewEqualityComparisonCheck() EqualityComparisonCheck {
+	return EqualityComparisonCheck{}
 }
 
-// NewEqualityComparisonCheck creates a new EqualityComparisonCheck with the given reflect import name.
-func NewEqualityComparisonCheck(testVar, reflectImportName string) *EqualityComparisonCheck {
-	if testVar == "" {
-		testVar = "t"
-	}
-
-	if reflectImportName == "" {
-		reflectImportName = "reflect"
-	}
-
-	return &EqualityComparisonCheck{
-		testVar:           testVar,
-		reflectImportName: reflectImportName,
-	}
-}
-
-func (c EqualityComparisonCheck) Check(pass *analysis.Pass, funcDecl *ast.FuncDecl) {
+func (c EqualityComparisonCheck) Check(pass *analysis.Pass, testFunc model.TestFunction) {
 	// TODO
+	reflectImportName, ok := testFunc.ReflectImportName()
+	if !ok {
+		return
+	}
+
+	blStmt := testFunc.GetActualTestBlockStmt()
+
 	var stmts []ast.Stmt
-	if funcDecl.Body != nil {
-		stmts = funcDecl.Body.List
+	if blStmt != nil {
+		stmts = blStmt.List
 	}
 
 	for _, stmt := range stmts {
 		ast.Inspect(stmt, func(node ast.Node) bool {
 			switch node.(type) {
 			case *ast.CallExpr:
+				fmt.Println(reflectImportName)
+
 				return true
 			}
 

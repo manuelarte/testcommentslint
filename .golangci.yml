@@ -152,6 +152,8 @@ linters:
       align: false
     usetesting:
       os-temp-dir: true
+    wsl_v5:
+      branch-max-lines: 2
 
   exclusions:
     presets:
