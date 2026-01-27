@@ -10,6 +10,7 @@ import (
 	"golang.org/x/tools/go/ast/inspector"
 
 	"github.com/manuelarte/testcommentslint/analyzer/checks"
+	"github.com/manuelarte/testcommentslint/astutils"
 )
 
 const (
@@ -50,6 +51,7 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 	}
 
 	reflectPath := "reflect"
+
 	insp.Preorder(nodeFilter, func(n ast.Node) {
 		// Only process _test.go files
 		if !strings.HasSuffix(pass.Fset.File(n.Pos()).Name(), "_test.go") {
@@ -64,14 +66,16 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 				}
 			}
 		case *ast.FuncDecl:
-			ok, testVar := isTestFunction(node)
+			ok, testVar := astutils.IsTestFunction(node)
 			if !ok {
 				return
 			}
+
 			var check *checks.EqualityComparisonCheck
 			if l.equalityComparison {
 				check = checks.NewEqualityComparisonCheck(testVar, reflectPath)
 			}
+
 			l.analyzeTestFunction(pass, node, check)
 		}
 	})
@@ -80,7 +84,7 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 	return nil, nil
 }
 
-func (l testcommentslint) analyzeTestFunction(
+func (l *testcommentslint) analyzeTestFunction(
 	pass *analysis.Pass,
 	funcDecl *ast.FuncDecl,
 	check *checks.EqualityComparisonCheck,

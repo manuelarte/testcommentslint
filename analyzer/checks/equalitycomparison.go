@@ -36,12 +36,14 @@ func (c EqualityComparisonCheck) Check(pass *analysis.Pass, funcDecl *ast.FuncDe
 	if funcDecl.Body != nil {
 		stmts = funcDecl.Body.List
 	}
+
 	for _, stmt := range stmts {
 		ast.Inspect(stmt, func(node ast.Node) bool {
 			switch node.(type) {
 			case *ast.CallExpr:
 				return true
 			}
+
 			return false
 		})
 	}
