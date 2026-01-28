@@ -21,7 +21,7 @@ func (i ReflectImport) ImportName() string {
 		return i.is.Name.Name
 	}
 
-	return i.is.Path.Value
+	return i.is.Path.Value[1 : len(i.is.Path.Value)-1]
 }
 
 // TestFunction is the holder of a test function declaration.

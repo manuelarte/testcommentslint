@@ -13,7 +13,7 @@ func TestNewMyStruct(t *testing.T) {
 		name: "John",
 	}
 	got := NewMyStruct(want.id, want.name)
-	if !reflect.DeepEqual(got, want) {
+	if !reflect.DeepEqual(got, want) { // want `Use cmp.Equal for equality comparison`
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
@@ -43,5 +43,17 @@ func TestTableDrivenTestNewMyStruct(t *testing.T) {
 				t.Errorf("got %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestNewMyStructSeparateLine(t *testing.T) {
+	t.Parallel()
+
+	want := MyStruct{id: 1, name: "John"}
+	got := NewMyStruct(want.id, want.name)
+
+	isEqual := reflect.DeepEqual(got, want)
+	if !isEqual {
+		t.Errorf("got %v, want %v", got, want)
 	}
 }

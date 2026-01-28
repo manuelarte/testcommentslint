@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"fmt"
 	"go/ast"
 
 	"golang.org/x/tools/go/analysis"
@@ -10,15 +9,18 @@ import (
 )
 
 // EqualityComparisonCheck checks that reflect.DeepEqual can be replaced by newer cmp.Equal.
-type EqualityComparisonCheck struct{}
+type EqualityComparisonCheck struct {
+	category string
+}
 
 // NewEqualityComparisonCheck creates a new EqualityComparisonCheck.
 func NewEqualityComparisonCheck() EqualityComparisonCheck {
-	return EqualityComparisonCheck{}
+	return EqualityComparisonCheck{
+		category: "Equality Comparison and Diffs",
+	}
 }
 
 func (c EqualityComparisonCheck) Check(pass *analysis.Pass, testFunc model.TestFunction) {
-	// TODO
 	reflectImportName, ok := testFunc.ReflectImportName()
 	if !ok {
 		return
@@ -32,15 +34,47 @@ func (c EqualityComparisonCheck) Check(pass *analysis.Pass, testFunc model.TestF
 	}
 
 	for _, stmt := range stmts {
-		ast.Inspect(stmt, func(node ast.Node) bool {
-			switch node.(type) {
-			case *ast.CallExpr:
-				fmt.Println(reflectImportName)
-
-				return true
+		switch node := stmt.(type) {
+		case *ast.IfStmt:
+			// check reflect.DeepEqual calls
+			diag := c.checkCond(node.Cond, reflectImportName)
+			if diag != nil {
+				pass.Report(*diag)
 			}
-
-			return false
-		})
+		}
 	}
+}
+
+func (c EqualityComparisonCheck) checkCond(cond ast.Expr, reflectImportName string) *analysis.Diagnostic {
+	switch node := cond.(type) {
+	case *ast.UnaryExpr:
+		return c.checkUnaryExpr(node, reflectImportName)
+	}
+	return nil
+}
+
+func (c EqualityComparisonCheck) checkUnaryExpr(unary *ast.UnaryExpr, reflectImportName string) *analysis.Diagnostic {
+	switch node := unary.X.(type) {
+	case *ast.CallExpr:
+		// check reflect.DeepEqual
+		return c.checkCallExpr(node, reflectImportName)
+	}
+
+	return nil
+}
+
+func (c EqualityComparisonCheck) checkCallExpr(call *ast.CallExpr, reflectImportName string) *analysis.Diagnostic {
+	switch node := call.Fun.(type) {
+	case *ast.SelectorExpr:
+		if ident, ok := node.X.(*ast.Ident); ok && ident.Name == reflectImportName && node.Sel.Name == "DeepEqual" {
+			return &analysis.Diagnostic{
+				Pos:      node.Pos(),
+				End:      node.End(),
+				Category: c.category,
+				Message:  "Use cmp.Equal for equality comparison",
+				URL:      "https://github.com/manuelarte/testcommentslint/tree/main?tab=readme-ov-file#equality-comparison-and-diffs",
+			}
+		}
+	}
+	return nil
 }
