@@ -52,7 +52,8 @@ A usual format for printing test outputs is `YourFunc(%v) = %v, want %v`.
 
 In most tests, your test failure messages should include the function inputs if they are short.
 If the relevant properties of the inputs are not obvious (for example, because the inputs are large or opaque),
-you should name your test cases with a description of what’s being tested and print the description as part of your error message.
+you should name your test cases with a description of what’s being tested and print the description as part of your
+error message.
 
 Do not use the index of the test in the test table as a substitute for naming your tests or printing the inputs.
 Nobody wants to go through your test table and count the entries to figure out which test case is failing.
