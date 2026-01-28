@@ -45,6 +45,16 @@ For more use cases and examples, check [equality-comparison](analyzer/testdata/s
 
 ### [Got before Want](https://go.dev/wiki/TestComments#got-before-want)
 
+TODO: do that if a failure message is something like:
+check that one of the param is the output of the function above the if.
+
+- expected/want: %s, actual/got: %s,
+then it should be
+- `YourFunc(%v) = %v, want %v`.
+
+Possible extra:
+check if there are many if with t.Errorf that used the same variable, and the recommend using cmp.Diff.
+
 Test outputs should output the actual value that the function returned before printing the value that was expected.
 A usual format for printing test outputs is `YourFunc(%v) = %v, want %v`.
 
