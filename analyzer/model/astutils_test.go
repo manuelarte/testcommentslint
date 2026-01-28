@@ -5,14 +5,17 @@ import (
 	"go/parser"
 	"go/token"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestIsTableDrivenTest(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		content string
-		want    bool
+		content   string
+		want      bool
+		wantBlock func(*ast.FuncDecl) *ast.BlockStmt
 	}{
 		"map table driven test": {
 			content: `
@@ -39,6 +42,10 @@ func TestExample(t *testing.T) {
 }
 			`[1:],
 			want: true,
+			wantBlock: func(funcDecl *ast.FuncDecl) *ast.BlockStmt {
+				//nolint:lll
+				return funcDecl.Body.List[1].(*ast.RangeStmt).Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr).Args[1].(*ast.FuncLit).Body
+			},
 		},
 		"slice table driven test": {
 			content: `
@@ -67,6 +74,10 @@ func TestExample(t *testing.T) {
 }
 			`[1:],
 			want: true,
+			wantBlock: func(funcDecl *ast.FuncDecl) *ast.BlockStmt {
+				//nolint:lll
+				return funcDecl.Body.List[1].(*ast.RangeStmt).Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr).Args[1].(*ast.FuncLit).Body
+			},
 		},
 		"no table driven test": {
 			content: `
@@ -95,9 +106,13 @@ func TestExample(t *testing.T) {
 
 			ast.Inspect(node, func(n ast.Node) bool {
 				if funcDecl, ok := n.(*ast.FuncDecl); ok {
-					got, _ := isTableDrivenTest(funcDecl)
+					got, gotBlock := isTableDrivenTest(funcDecl)
 					if got != tc.want {
 						t.Errorf("IsTableDrivenTest() got %v, want %v", got, tc.want)
+					}
+
+					if tc.wantBlock != nil && !cmp.Equal(gotBlock, tc.wantBlock(funcDecl)) {
+						t.Errorf("IsTableDrivenTest() mismatch (-want +got):\n%s", cmp.Diff(tc.wantBlock(funcDecl), gotBlock))
 					}
 				}
 
