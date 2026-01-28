@@ -67,7 +67,7 @@ func isTableDrivenTest(funcDecl *ast.FuncDecl) (bool, *ast.BlockStmt) {
 			}
 		// possible for loops that can be used in a table-driven test
 		case *ast.RangeStmt:
-			// identifier must be declared before, and be used as range
+			// identifier must be declared before and be used as range
 			rangeIdent, ok := node.X.(*ast.Ident)
 			if !ok {
 				continue
@@ -76,7 +76,7 @@ func isTableDrivenTest(funcDecl *ast.FuncDecl) (bool, *ast.BlockStmt) {
 			if _, isDeclaredBefore := identifiers[rangeIdent.Name]; !isDeclaredBefore {
 				continue
 			}
-			// next instruction in a range stmt needs to be a t.Run
+			// the next instruction in a range stmt needs to be a t.Run
 			if node.Body != nil && len(node.Body.List) != 1 {
 				continue
 			}
@@ -96,15 +96,21 @@ func isTableDrivenTest(funcDecl *ast.FuncDecl) (bool, *ast.BlockStmt) {
 				continue
 			}
 
-			if selectorExpr.Sel.Name != "Run" {
+			if ident, isIdent := selectorExpr.X.(*ast.Ident); !isIdent || ident.Name != "t" || selectorExpr.Sel.Name != "Run" {
 				continue
 			}
 
-			if ident, isIdent := selectorExpr.X.(*ast.Ident); isIdent && ident.Name != "t" {
+			// returns the second parameter of t.Run with the function
+			if len(callExpr.Args) != 2 {
 				continue
 			}
 
-			return true, node.Body
+			funcLit, isFuncLit := callExpr.Args[1].(*ast.FuncLit)
+			if !isFuncLit {
+				continue
+			}
+
+			return true, funcLit.Body
 		}
 	}
 

@@ -14,6 +14,16 @@ To install it, run:
 go install github.com/manuelarte/testcommentslint@latest
 ```
 
+And then use it with
+
+```bash
+testcommentslint [-equality-comparison=true|false] ./...
+```
+
+Parameters:
+
+- `equality-comparison`: `true|false` (default `true`) Checks `reflect.DeepEqual` can be replaced by newer `cmp.Equal`.
+
 ## 🚀 Features
 
 ### [Compare Full Structures](https://go.dev/wiki/TestComments#compare-full-structures)
@@ -22,8 +32,16 @@ TODO(manuelarte): Think about this
 
 ### [Equality Comparison and Diffs](https://go.dev/wiki/TestComments#equality-comparison-and-diffs)
 
-TODO(manuelarte): You will find older code using the standard `reflect.DeepEqual` function to compare complex structures.
-Prefer `cmp` for new code.
+This linter detects expressions like:
+
+```go
+if !reflect.DeepEqual(got, want) {
+    t.Errorf("MyFunction got %v, want %v", got, want)
+}
+```
+
+And lint that the newer [`cmp.Equal`][cmp-equal] should be used.
+For more use cases and examples, check [equality-comparison](analyzer/testdata/src/equality_comparison).
 
 ### [Got before Want](https://go.dev/wiki/TestComments#got-before-want)
 
@@ -41,5 +59,8 @@ Nobody wants to go through your test table and count the entries to figure out w
 
 ### [Print Diffs](https://go.dev/wiki/TestComments#print-diffs)
 
-If your function returns large output, then it can be hard for someone reading the failure message to find the differences when your test fails.
+If your function returns a large output, then it can be hard for someone reading the failure message to
+find the differences when your test fails.
 Instead of printing both the returned value and the wanted value, make a diff.
+
+[cmp-equal]: https://pkg.go.dev/github.com/google/go-cmp/cmp#Equal

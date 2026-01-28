@@ -20,6 +20,7 @@ func NewEqualityComparisonCheck() EqualityComparisonCheck {
 	}
 }
 
+//nolint:gocritic // still under development
 func (c EqualityComparisonCheck) Check(pass *analysis.Pass, testFunc model.TestFunction) {
 	reflectImportName, ok := testFunc.ReflectImportName()
 	if !ok {
@@ -45,14 +46,17 @@ func (c EqualityComparisonCheck) Check(pass *analysis.Pass, testFunc model.TestF
 	}
 }
 
+//nolint:gocritic // still under development
 func (c EqualityComparisonCheck) checkCond(cond ast.Expr, reflectImportName string) *analysis.Diagnostic {
 	switch node := cond.(type) {
 	case *ast.UnaryExpr:
 		return c.checkUnaryExpr(node, reflectImportName)
 	}
+
 	return nil
 }
 
+//nolint:gocritic // still under development
 func (c EqualityComparisonCheck) checkUnaryExpr(unary *ast.UnaryExpr, reflectImportName string) *analysis.Diagnostic {
 	switch node := unary.X.(type) {
 	case *ast.CallExpr:
@@ -63,6 +67,7 @@ func (c EqualityComparisonCheck) checkUnaryExpr(unary *ast.UnaryExpr, reflectImp
 	return nil
 }
 
+//nolint:gocritic // still under development
 func (c EqualityComparisonCheck) checkCallExpr(call *ast.CallExpr, reflectImportName string) *analysis.Diagnostic {
 	switch node := call.Fun.(type) {
 	case *ast.SelectorExpr:
@@ -72,9 +77,11 @@ func (c EqualityComparisonCheck) checkCallExpr(call *ast.CallExpr, reflectImport
 				End:      node.End(),
 				Category: c.category,
 				Message:  "Use cmp.Equal for equality comparison",
-				URL:      "https://github.com/manuelarte/testcommentslint/tree/main?tab=readme-ov-file#equality-comparison-and-diffs",
+
+				URL: "https://github.com/manuelarte/testcommentslint/tree/main?tab=readme-ov-file#equality-comparison-and-diffs",
 			}
 		}
 	}
+
 	return nil
 }
