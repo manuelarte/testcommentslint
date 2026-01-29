@@ -13,7 +13,7 @@ func TestImportAliasingNewMyStruct(t *testing.T) {
 		name: "John",
 	}
 	got := NewMyStruct(want.id, want.name)
-	if !rf.DeepEqual(got, want) { // want `Use cmp.Equal for equality comparison`
+	if !rf.DeepEqual(got, want) { // want `Use cmp.Equal or cmp.Diff for equality comparison`
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
@@ -39,7 +39,7 @@ func TestImportAliasingTableDrivenTestNewMyStruct(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got := NewMyStruct(tc.id, tc.name)
 
-			if !rf.DeepEqual(got, tc.want) { // want `Use cmp.Equal for equality comparison`
+			if !rf.DeepEqual(got, tc.want) { // want `Use cmp.Equal or cmp.Diff for equality comparison`
 				t.Errorf("got %v, want %v", got, tc.want)
 			}
 		})

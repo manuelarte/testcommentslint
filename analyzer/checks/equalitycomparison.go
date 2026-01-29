@@ -46,9 +46,10 @@ func (c EqualityComparisonCheck) Check(pass *analysis.Pass, testFunc model.TestF
 	}
 }
 
-//nolint:gocritic // still under development
 func (c EqualityComparisonCheck) checkCond(cond ast.Expr, reflectImportName string) *analysis.Diagnostic {
 	switch node := cond.(type) {
+	case *ast.CallExpr:
+		return c.checkCallExpr(node, reflectImportName)
 	case *ast.UnaryExpr:
 		return c.checkUnaryExpr(node, reflectImportName)
 	}
@@ -76,7 +77,7 @@ func (c EqualityComparisonCheck) checkCallExpr(call *ast.CallExpr, reflectImport
 				Pos:      node.Pos(),
 				End:      node.End(),
 				Category: c.category,
-				Message:  "Use cmp.Equal for equality comparison",
+				Message:  "Use cmp.Equal or cmp.Diff for equality comparison",
 
 				URL: "https://github.com/manuelarte/testcommentslint/tree/main?tab=readme-ov-file#equality-comparison-and-diffs",
 			}

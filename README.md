@@ -40,8 +40,12 @@ if !reflect.DeepEqual(got, want) {
 }
 ```
 
-And lint that the newer [`cmp.Equal`][cmp-equal] should be used.
+And lint that the newer [`cmp.Equal`][cmp-equal] or [`cmp.Diff`][cmp-diff] should be used.
 For more use cases and examples, check [equality-comparison](analyzer/testdata/src/equality_comparison).
+
+> [!NOTE]
+> Suggested Fix can't be supported since it could potentially imply adding go-cmp dependency
+> and `reflect.DeepEqual` can't be directly replaced by `cmp.Equal` or `cmp.Diff`.
 
 ### [Got before Want](https://go.dev/wiki/TestComments#got-before-want)
 
@@ -75,3 +79,4 @@ find the differences when your test fails.
 Instead of printing both the returned value and the wanted value, make a diff.
 
 [cmp-equal]: https://pkg.go.dev/github.com/google/go-cmp/cmp#Equal
+[cmp-diff]: https://pkg.go.dev/github.com/google/go-cmp/cmp#Diff
