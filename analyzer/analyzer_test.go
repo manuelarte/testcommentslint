@@ -16,6 +16,12 @@ func TestAnalyzer(t *testing.T) {
 		"equality comparison": {
 			patterns: "equality_comparison",
 		},
+		"failure message": {
+			patterns: "failure_message",
+			options: map[string]string{
+				EqualityComparisonCheckName: "false",
+			},
+		},
 	}
 
 	for name, test := range testCases {

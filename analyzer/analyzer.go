@@ -15,6 +15,7 @@ import (
 
 const (
 	EqualityComparisonCheckName = "equality-comparison"
+	FailureMessageCheckName     = "failure-message"
 )
 
 func New() *analysis.Analyzer {
@@ -30,12 +31,15 @@ func New() *analysis.Analyzer {
 
 	a.Flags.BoolVar(&l.equalityComparison, EqualityComparisonCheckName, true,
 		"Checks reflect.DeepEqual can be replaced by newer cmp.Equal.")
+	a.Flags.BoolVar(&l.failureMessage, FailureMessageCheckName, true,
+		"Check that the failure messages in t.Errorf follow the format expected.")
 
 	return a
 }
 
 type testcommentslint struct {
 	equalityComparison bool
+	failureMessage     bool
 }
 
 func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
@@ -72,7 +76,10 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 			}
 
 			if l.equalityComparison {
-				checks.NewEqualityComparisonCheck().Check(pass, testFunc)
+				checks.NewEqualityComparison().Check(pass, testFunc)
+			}
+			if l.failureMessage {
+				checks.NewFailureMessage().Check(pass, testFunc)
 			}
 		}
 	})

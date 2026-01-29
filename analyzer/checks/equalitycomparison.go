@@ -8,20 +8,20 @@ import (
 	"github.com/manuelarte/testcommentslint/analyzer/model"
 )
 
-// EqualityComparisonCheck checks that reflect.DeepEqual can be replaced by newer cmp.Equal.
-type EqualityComparisonCheck struct {
+// EqualityComparison checks that reflect.DeepEqual can be replaced by newer cmp.Equal.
+type EqualityComparison struct {
 	category string
 }
 
-// NewEqualityComparisonCheck creates a new EqualityComparisonCheck.
-func NewEqualityComparisonCheck() EqualityComparisonCheck {
-	return EqualityComparisonCheck{
+// NewEqualityComparison creates a new EqualityComparison.
+func NewEqualityComparison() EqualityComparison {
+	return EqualityComparison{
 		category: "Equality Comparison and Diffs",
 	}
 }
 
 //nolint:gocritic // still under development
-func (c EqualityComparisonCheck) Check(pass *analysis.Pass, testFunc model.TestFunction) {
+func (c EqualityComparison) Check(pass *analysis.Pass, testFunc model.TestFunction) {
 	reflectImportName, ok := testFunc.ReflectImportName()
 	if !ok {
 		return
@@ -46,7 +46,7 @@ func (c EqualityComparisonCheck) Check(pass *analysis.Pass, testFunc model.TestF
 	}
 }
 
-func (c EqualityComparisonCheck) checkCond(cond ast.Expr, reflectImportName string) *analysis.Diagnostic {
+func (c EqualityComparison) checkCond(cond ast.Expr, reflectImportName string) *analysis.Diagnostic {
 	switch node := cond.(type) {
 	case *ast.CallExpr:
 		return c.checkCallExpr(node, reflectImportName)
@@ -58,7 +58,7 @@ func (c EqualityComparisonCheck) checkCond(cond ast.Expr, reflectImportName stri
 }
 
 //nolint:gocritic // still under development
-func (c EqualityComparisonCheck) checkUnaryExpr(unary *ast.UnaryExpr, reflectImportName string) *analysis.Diagnostic {
+func (c EqualityComparison) checkUnaryExpr(unary *ast.UnaryExpr, reflectImportName string) *analysis.Diagnostic {
 	switch node := unary.X.(type) {
 	case *ast.CallExpr:
 		// check reflect.DeepEqual
@@ -69,7 +69,7 @@ func (c EqualityComparisonCheck) checkUnaryExpr(unary *ast.UnaryExpr, reflectImp
 }
 
 //nolint:gocritic // still under development
-func (c EqualityComparisonCheck) checkCallExpr(call *ast.CallExpr, reflectImportName string) *analysis.Diagnostic {
+func (c EqualityComparison) checkCallExpr(call *ast.CallExpr, reflectImportName string) *analysis.Diagnostic {
 	switch node := call.Fun.(type) {
 	case *ast.SelectorExpr:
 		if ident, ok := node.X.(*ast.Ident); ok && ident.Name == reflectImportName && node.Sel.Name == "DeepEqual" {
