@@ -14,6 +14,6 @@ func TestNewMyStruct(t *testing.T) {
 	want := 2
 	got := sum(1, 1)
 	if got != want {
-		t.Errorf("got %v, want %v", got, want) // want `Prefer "sum(%v, %v) = %v, want %v" format for failure message`
+		t.Errorf("got %v, want %v", got, want) // want `Prefer "sum\(%v, %v\) = %v, want %v" format for failure message`
 	}
 }

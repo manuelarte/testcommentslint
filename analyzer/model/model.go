@@ -70,3 +70,8 @@ func (t TestFunction) GetActualTestBlockStmt() *ast.BlockStmt {
 
 	return t.funcDecl.Body
 }
+
+// GetTestVar returns the name of the testing.T parameter.
+func (t TestFunction) GetTestVar() string {
+	return t.testVar
+}
