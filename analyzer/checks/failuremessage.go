@@ -17,7 +17,7 @@ type FailureMessage struct {
 // NewFailureMessage creates a new FailureMessage.
 func NewFailureMessage() FailureMessage {
 	return FailureMessage{
-		category: "Equality Comparison and Diffs",
+		category: "Failure Message",
 	}
 }
 
