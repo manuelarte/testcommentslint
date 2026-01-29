@@ -78,6 +78,7 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 			if l.equalityComparison {
 				checks.NewEqualityComparison().Check(pass, testFunc)
 			}
+
 			if l.failureMessage {
 				checks.NewFailureMessage().Check(pass, testFunc)
 			}

@@ -15,6 +15,9 @@ func TestAnalyzer(t *testing.T) {
 	}{
 		"equality comparison": {
 			patterns: "equality_comparison",
+			options: map[string]string{
+				FailureMessageCheckName: "falsegi",
+			},
 		},
 		"failure message": {
 			patterns: "failure_message",
