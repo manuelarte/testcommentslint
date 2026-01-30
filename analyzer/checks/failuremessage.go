@@ -39,12 +39,15 @@ func (c FailureMessage) Check(pass *analysis.Pass, testFunc model.TestFunction) 
 		switch node := stmt.(type) {
 		case *ast.IfStmt:
 			// Check the condition to see if it's a comparison like got != want
-			gwStmt, ok := newGotWantIfStmt(testVar, node)
-			if !ok {
+			if i == 0 {
+				continue
+			}
+			testBlock, isTestBlock := newTestFuncBlock(testVar, stmts[i-1], node)
+			if !isTestBlock {
 				continue
 			}
 
-			fmt.Printf("%v, %v\n", gwStmt, ok)
+			fmt.Printf("%q\n", testBlock.getFunctionName())
 
 			if c.isEqualityOrDiffCondition(node.Cond) {
 				// Check the body for t.Errorf calls
@@ -240,6 +243,25 @@ func (c FailureMessage) generateSuggestedFormatWithContext(format, functionName 
 
 // Auxiliary structs to facilitate the business logic.
 type (
+	// testFuncBlock is a struct that holds the typical testing block like:
+	// got := myFunction(in)
+	// if got != want {
+	//   t.Errorf(...)
+	// }
+	testFuncBlock struct {
+		// testedFunc contain the actual call to the function tested.
+		testedFunc testFuncStmt
+		// contain the got != want condition and the t.Errorf call.
+		ifStmt gotWantIfStmt
+	}
+
+	// testFuncStmt contains the actual call to the function tested.
+	testFuncStmt struct {
+		callExpr *ast.CallExpr
+
+		params []*ast.Ident
+	}
+
 	// gotWantIfStatement struct holding an if statement that contains a comparison of got and want.
 	// Conditions allowed:
 	// - got != want
@@ -255,12 +277,75 @@ type (
 		errorCallExpr tErrorfCallExpr
 	}
 
+	// tErrorfCallExpr contains the call to t.Errorf and its parameters.
 	tErrorfCallExpr struct {
 		callExpr *ast.CallExpr
 
 		params []*ast.Ident
 	}
 )
+
+func newTestFuncBlock(testVar string, prev ast.Stmt, ifStmt *ast.IfStmt) (testFuncBlock, bool) {
+	gwStmt, isGotWant := newGotWantIfStmt(testVar, ifStmt)
+	if !isGotWant {
+		return testFuncBlock{}, false
+	}
+	testedFunc, isTestedFunc := newTestedFuncExpr(prev)
+	if !isTestedFunc {
+		return testFuncBlock{}, false
+	}
+
+	return testFuncBlock{
+		testedFunc: testedFunc,
+		ifStmt:     gwStmt,
+	}, true
+}
+
+func (t testFuncBlock) getFunctionName() string {
+	return t.testedFunc.getFunctionName()
+}
+
+// newTestedFuncExpr creates a testedFuncStmt after checking that the stmt is a typical function call.
+func newTestedFuncExpr(stmt ast.Stmt) (testFuncStmt, bool) {
+	var callExpr *ast.CallExpr
+	params := make([]*ast.Ident, 0)
+	switch node := stmt.(type) {
+	case *ast.AssignStmt:
+		for _, expr := range node.Lhs {
+			ident, ok := isValidIdent(expr)
+			if !ok {
+				return testFuncStmt{}, false
+			}
+			params = append(params, ident)
+		}
+		if len(node.Rhs) != 1 {
+			return testFuncStmt{}, false
+		}
+		ce, ok := node.Rhs[0].(*ast.CallExpr)
+		if !ok {
+			return testFuncStmt{}, false
+		}
+		callExpr = ce
+	}
+
+	return testFuncStmt{
+		callExpr: callExpr,
+		params:   params,
+	}, true
+}
+
+func (t testFuncStmt) getFunctionName() string {
+	switch fn := t.callExpr.Fun.(type) {
+	case *ast.Ident:
+		return fn.Name
+	case *ast.SelectorExpr:
+		if ident, ok := fn.X.(*ast.Ident); ok {
+			return ident.Name + "." + fn.Sel.Name
+		}
+	}
+
+	return ""
+}
 
 // newGotWantIfStmt creates a new gotWantIfStmt.
 // only if the condition applies.
@@ -287,9 +372,8 @@ func newGotWantIfStmt(testVar string, ifStmt *ast.IfStmt) (gotWantIfStmt, bool) 
 			return gotWantIfStmt{}, false
 		}
 
-		xIdent, isXIdent := node.X.(*ast.Ident)
-
-		yIdent, isYIdent := node.Y.(*ast.Ident)
+		xIdent, isXIdent := isValidIdent(node.X)
+		yIdent, isYIdent := isValidIdent(node.Y)
 		if !isXIdent || !isYIdent {
 			return gotWantIfStmt{}, false
 		}
@@ -316,6 +400,7 @@ func newGotWantIfStmt(testVar string, ifStmt *ast.IfStmt) (gotWantIfStmt, bool) 
 	}, true
 }
 
+// newTErrorfCallExpr creates a tErrorfCallExpr after checking that the stmt is a call to t.Errorf.
 func newTErrorfCallExpr(testVar string, stmt ast.Stmt) (tErrorfCallExpr, bool) {
 	exprStmt, isExprStmt := stmt.(*ast.ExprStmt)
 	if !isExprStmt {
@@ -333,11 +418,7 @@ func newTErrorfCallExpr(testVar string, stmt ast.Stmt) (tErrorfCallExpr, bool) {
 	}
 
 	ident, isIdent := selectorExpr.X.(*ast.Ident)
-	if !isIdent {
-		return tErrorfCallExpr{}, false
-	}
-
-	if ident.Name != testVar || selectorExpr.Sel.Name != "Errorf" {
+	if !isIdent || ident.Name != testVar || selectorExpr.Sel.Name != "Errorf" {
 		return tErrorfCallExpr{}, false
 	}
 
@@ -356,4 +437,16 @@ func newTErrorfCallExpr(testVar string, stmt ast.Stmt) (tErrorfCallExpr, bool) {
 		callExpr: callExpr,
 		params:   []*ast.Ident{firstIdent, secondIdent},
 	}, true
+}
+
+func isValidIdent(expr ast.Expr) (*ast.Ident, bool) {
+	ident, ok := expr.(*ast.Ident)
+	if !ok {
+		return nil, false
+	}
+	if ident.Name == "_" {
+		return nil, false
+	}
+
+	return ident, true
 }
