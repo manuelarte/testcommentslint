@@ -3,7 +3,6 @@ package checks
 import (
 	"fmt"
 	"go/ast"
-	"regexp"
 	"strings"
 
 	"golang.org/x/tools/go/analysis"
@@ -36,209 +35,27 @@ func (c FailureMessage) Check(pass *analysis.Pass, testFunc model.TestFunction) 
 	}
 
 	for i, stmt := range stmts {
-		switch node := stmt.(type) {
-		case *ast.IfStmt:
+		if ifStmt, ok := stmt.(*ast.IfStmt); ok {
 			// Check the condition to see if it's a comparison like got != want
 			if i == 0 {
 				continue
 			}
-			testBlock, isTestBlock := newTestFuncBlock(testVar, stmts[i-1], node)
+
+			testBlock, isTestBlock := newTestFuncBlock(testVar, stmts[i-1], ifStmt)
 			if !isTestBlock {
 				continue
 			}
 
-			fmt.Printf("%q\n", testBlock.getFunctionName())
-
-			if c.isEqualityOrDiffCondition(node.Cond) {
-				// Check the body for t.Errorf calls
-				if node.Body != nil {
-					// Extract function name from preceding statements
-					functionName := c.extractFunctionName(stmts[:i])
-					c.checkStmtListWithContext(pass, node.Body.List, testVar, functionName)
-				}
+			diag := analysis.Diagnostic{
+				Pos:      testBlock.ifStmt.errorCallExpr.callExpr.Pos(),
+				End:      testBlock.ifStmt.errorCallExpr.callExpr.End(),
+				Category: c.category,
+				Message:  testBlock.expectedFailureMessage(),
+				URL:      "https://github.com/manuelarte/testcommentslint/tree/main?tab=readme-ov-file#failure-message",
 			}
+			pass.Report(diag)
 		}
 	}
-}
-
-// isEqualityOrDiffCondition checks if a condition is an equality/inequality check or DeepEqual call.
-func (c FailureMessage) isEqualityOrDiffCondition(cond ast.Expr) bool {
-	switch node := cond.(type) {
-	case *ast.BinaryExpr:
-		// Check for operators like !=, ==
-		return node.Op.String() == "!=" || node.Op.String() == "=="
-	case *ast.UnaryExpr:
-		// Check for ! prefix (e.g., !reflect.DeepEqual)
-		return true
-	case *ast.CallExpr:
-		// Check for function calls like reflect.DeepEqual, cmp.Equal, cmp.Diff
-		return true
-	}
-
-	return false
-}
-
-// checkStmtList checks a list of statements for t.Errorf calls.
-func (c FailureMessage) checkStmtList(pass *analysis.Pass, stmts []ast.Stmt, testVar string) {
-	c.checkStmtListWithContext(pass, stmts, testVar, "")
-}
-
-// checkStmtListWithContext checks a list of statements for t.Errorf calls with function context.
-func (c FailureMessage) checkStmtListWithContext(pass *analysis.Pass, stmts []ast.Stmt, testVar, functionName string) {
-	for _, stmt := range stmts {
-		switch node := stmt.(type) {
-		case *ast.ExprStmt:
-			if callExpr, ok := node.X.(*ast.CallExpr); ok {
-				c.checkErrorfCallWithContext(pass, callExpr, testVar, functionName)
-			}
-		}
-	}
-}
-
-// extractFunctionName extracts the function name and parameter count from preceding statements.
-func (c FailureMessage) extractFunctionName(stmts []ast.Stmt) string {
-	// Look for assignment statements that contain function calls
-	// Prefer the most recent assignment that might be related to the test
-	for i := len(stmts) - 1; i >= 0; i-- {
-		switch node := stmts[i].(type) {
-		case *ast.AssignStmt:
-			if len(node.Rhs) > 0 {
-				if callExpr, ok := node.Rhs[0].(*ast.CallExpr); ok {
-					funcName := c.extractCallExprName(callExpr)
-
-					paramCount := len(callExpr.Args)
-					if funcName != "" {
-						// Create format like "sum(%v, %v)" based on parameter count
-						placeholders := make([]string, paramCount)
-						for j := range paramCount {
-							placeholders[j] = "%v"
-						}
-
-						return funcName + "(" + strings.Join(placeholders, ", ") + ")"
-					}
-				}
-			}
-		}
-	}
-
-	return ""
-}
-
-// extractCallExprName extracts the function name from a call expression.
-func (c FailureMessage) extractCallExprName(callExpr *ast.CallExpr) string {
-	switch fn := callExpr.Fun.(type) {
-	case *ast.Ident:
-		return fn.Name
-	case *ast.SelectorExpr:
-		if ident, ok := fn.X.(*ast.Ident); ok {
-			return ident.Name + "." + fn.Sel.Name
-		}
-	}
-
-	return ""
-}
-
-// checkErrorfCall checks if a t.Errorf call has the correct format.
-func (c FailureMessage) checkErrorfCall(pass *analysis.Pass, callExpr *ast.CallExpr, testVar string) {
-	c.checkErrorfCallWithContext(pass, callExpr, testVar, "")
-}
-
-// checkErrorfCallWithContext checks if a t.Errorf call has the correct format with function context.
-func (c FailureMessage) checkErrorfCallWithContext(pass *analysis.Pass, callExpr *ast.CallExpr, testVar, functionName string) {
-	// Check if this is a t.Errorf call
-	if !c.isErrorfCall(callExpr, testVar) {
-		return
-	}
-
-	if len(callExpr.Args) < 1 {
-		return
-	}
-
-	// Get the format string
-	formatArg := callExpr.Args[0]
-
-	formatStr, ok := formatArg.(*ast.BasicLit)
-	if !ok || formatStr.Kind.String() != "STRING" {
-		return
-	}
-
-	// Remove quotes from the format string
-	format := strings.Trim(formatStr.Value, "\"")
-
-	// Check if the format follows the expected pattern
-	// Expected: "functionName(...) = ..., want ..."
-	if !c.isValidFormatString(format) {
-		// Generate a suggested format
-		suggestedFormat := c.generateSuggestedFormatWithContext(format, functionName)
-		// Build message: Prefer "suggestedFormat" format for failure message
-		var sb strings.Builder
-		sb.WriteString("Prefer \"")
-		sb.WriteString(suggestedFormat)
-		sb.WriteString("\" format for failure message")
-		message := sb.String()
-		diag := &analysis.Diagnostic{
-			Pos:      callExpr.Pos(),
-			End:      callExpr.End(),
-			Category: c.category,
-			Message:  message,
-			URL:      "https://github.com/manuelarte/testcommentslint/tree/main?tab=readme-ov-file#failure-message",
-		}
-		pass.Report(*diag)
-	}
-}
-
-// isErrorfCall checks if a call expression is a t.Errorf call.
-func (c FailureMessage) isErrorfCall(callExpr *ast.CallExpr, testVar string) bool {
-	if selectorExpr, ok := callExpr.Fun.(*ast.SelectorExpr); ok {
-		if ident, ok := selectorExpr.X.(*ast.Ident); ok {
-			return ident.Name == testVar && selectorExpr.Sel.Name == "Errorf"
-		}
-	}
-
-	return false
-}
-
-// isValidFormatString checks if a format string matches the expected pattern.
-func (c FailureMessage) isValidFormatString(format string) bool {
-	// Pattern should include function name with parameters and "want"
-	// e.g., "sum(%v, %v) = %v, want %v" or "foo() mismatch (-want +got):\n%s"
-
-	// Check if it contains the expected pattern
-	if strings.Contains(format, "want") {
-		// Should have format like "functionName(...) = ..., want ..."
-		return strings.Contains(format, "=")
-	}
-
-	return false
-}
-
-// generateSuggestedFormat generates a suggested format based on the provided format.
-func (c FailureMessage) generateSuggestedFormat(format string) string {
-	return c.generateSuggestedFormatWithContext(format, "")
-}
-
-// generateSuggestedFormatWithContext generates a suggested format with function context.
-func (c FailureMessage) generateSuggestedFormatWithContext(format, functionName string) string {
-	// Parse the format to extract function call pattern
-	// If format is "got %v, want %v", suggest "functionName(%v, %v) = %v, want %v"
-
-	// Simple heuristic: if it has "got %v, want %v", suggest the proper format
-	if strings.Contains(format, "got") && strings.Contains(format, "want") {
-		// Extract the pattern - try to find how many %v are used
-		pattern := regexp.MustCompile(`%[a-z]`)
-		matches := pattern.FindAllString(format, -1)
-
-		// For a simple got/want pattern with 2 matches, suggest the proper format
-		if len(matches) == 2 {
-			if functionName != "" {
-				return functionName + " = %v, want %v"
-			}
-
-			return "functionName(%v, %v) = %v, want %v"
-		}
-	}
-
-	return format
 }
 
 // Auxiliary structs to facilitate the business logic.
@@ -247,7 +64,7 @@ type (
 	// got := myFunction(in)
 	// if got != want {
 	//   t.Errorf(...)
-	// }
+	// }.
 	testFuncBlock struct {
 		// testedFunc contain the actual call to the function tested.
 		testedFunc testFuncStmt
@@ -290,6 +107,7 @@ func newTestFuncBlock(testVar string, prev ast.Stmt, ifStmt *ast.IfStmt) (testFu
 	if !isGotWant {
 		return testFuncBlock{}, false
 	}
+
 	testedFunc, isTestedFunc := newTestedFuncExpr(prev)
 	if !isTestedFunc {
 		return testFuncBlock{}, false
@@ -305,28 +123,74 @@ func (t testFuncBlock) getFunctionName() string {
 	return t.testedFunc.getFunctionName()
 }
 
+//nolint:unused // to be used later
+func (t testFuncBlock) getGotName() string {
+	for _, param := range t.testedFunc.params {
+		if param.Name == "_" {
+			continue
+		}
+
+		for _, ifParam := range t.ifStmt.params {
+			if param.Name == ifParam.Name {
+				return param.Name
+			}
+		}
+	}
+
+	// impossible case
+	return "got"
+}
+
+func (t testFuncBlock) expectedFailureMessage() string {
+	in := make([]string, len(t.testedFunc.callExpr.Args))
+	for i := range in {
+		in[i] = "%v"
+	}
+
+	out := make([]string, len(t.testedFunc.params))
+	for i := range out {
+		if t.testedFunc.params[i].Name == "_" {
+			out[i] = "_"
+		} else {
+			out[i] = "%v"
+		}
+	}
+
+	funcFailurePart := fmt.Sprintf("%s(%s) = %s", t.getFunctionName(), strings.Join(in, ", "), strings.Join(out, ", "))
+
+	return fmt.Sprintf("Prefer \"%s, want %%v\" format for failure message", funcFailurePart)
+}
+
 // newTestedFuncExpr creates a testedFuncStmt after checking that the stmt is a typical function call.
 func newTestedFuncExpr(stmt ast.Stmt) (testFuncStmt, bool) {
 	var callExpr *ast.CallExpr
+
 	params := make([]*ast.Ident, 0)
-	switch node := stmt.(type) {
-	case *ast.AssignStmt:
-		for _, expr := range node.Lhs {
-			ident, ok := isValidIdent(expr)
-			if !ok {
-				return testFuncStmt{}, false
-			}
-			params = append(params, ident)
-		}
-		if len(node.Rhs) != 1 {
-			return testFuncStmt{}, false
-		}
-		ce, ok := node.Rhs[0].(*ast.CallExpr)
+
+	assignStmt, isAssignStmt := stmt.(*ast.AssignStmt)
+	if !isAssignStmt {
+		return testFuncStmt{}, false
+	}
+
+	if len(assignStmt.Rhs) != 1 {
+		return testFuncStmt{}, false
+	}
+
+	for _, expr := range assignStmt.Lhs {
+		ident, ok := expr.(*ast.Ident)
 		if !ok {
 			return testFuncStmt{}, false
 		}
-		callExpr = ce
+
+		params = append(params, ident)
 	}
+
+	ce, ok := assignStmt.Rhs[0].(*ast.CallExpr)
+	if !ok {
+		return testFuncStmt{}, false
+	}
+
+	callExpr = ce
 
 	return testFuncStmt{
 		callExpr: callExpr,
@@ -372,8 +236,9 @@ func newGotWantIfStmt(testVar string, ifStmt *ast.IfStmt) (gotWantIfStmt, bool) 
 			return gotWantIfStmt{}, false
 		}
 
-		xIdent, isXIdent := isValidIdent(node.X)
-		yIdent, isYIdent := isValidIdent(node.Y)
+		xIdent, isXIdent := isNotBlankIdent(node.X)
+
+		yIdent, isYIdent := isNotBlankIdent(node.Y)
 		if !isXIdent || !isYIdent {
 			return gotWantIfStmt{}, false
 		}
@@ -426,6 +291,11 @@ func newTErrorfCallExpr(testVar string, stmt ast.Stmt) (tErrorfCallExpr, bool) {
 		return tErrorfCallExpr{}, false
 	}
 
+	basicLit, isBasicLit := callExpr.Args[0].(*ast.BasicLit)
+	if !isBasicLit || basicLit.Kind.String() != "STRING" {
+		return tErrorfCallExpr{}, false
+	}
+
 	firstIdent, isFirstIdent := callExpr.Args[1].(*ast.Ident)
 
 	secondIdent, isSecondIdent := callExpr.Args[2].(*ast.Ident)
@@ -439,11 +309,12 @@ func newTErrorfCallExpr(testVar string, stmt ast.Stmt) (tErrorfCallExpr, bool) {
 	}, true
 }
 
-func isValidIdent(expr ast.Expr) (*ast.Ident, bool) {
+func isNotBlankIdent(expr ast.Expr) (*ast.Ident, bool) {
 	ident, ok := expr.(*ast.Ident)
 	if !ok {
 		return nil, false
 	}
+
 	if ident.Name == "_" {
 		return nil, false
 	}
