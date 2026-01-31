@@ -13,7 +13,14 @@ import (
 // FailureMessage check that the failure messages in t.Errorf follow the format expected.
 // The format expected can be as the following:
 //   - when the condition is reflect.DeepEqual, cmp.Equal or got != want: "YourFunction(%v) = %v, want %v"
-//   - when the condition is cmp.Diff: YourFunction() mismatch (-want +got):\n%s
+//   - when the condition is cmp.Diff: YourFunction(%v) mismatch (-want +got):\n%s
+//
+// This checks blocks like the following:
+// got := MyFunction(in)
+//
+//	if got != want {
+//	  t.Errorf(...)
+//	}
 type FailureMessage struct {
 	category string
 }
@@ -158,7 +165,7 @@ func (t testFuncBlock) expectedFailureMessage() string {
 
 	funcFailurePart := fmt.Sprintf("%s(%s) = %s", t.getFunctionName(), strings.Join(in, ", "), strings.Join(out, ", "))
 
-	return fmt.Sprintf("Prefer \"%s, want %%v\" format for failure message", funcFailurePart)
+	return fmt.Sprintf("Prefer \"%s, want %%v\" format for a failure message", funcFailurePart)
 }
 
 // newTestedFuncExpr creates a testedFuncStmt after checking that the stmt is a typical function call.
