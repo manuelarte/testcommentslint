@@ -3,6 +3,8 @@ package checks
 import (
 	"fmt"
 	"go/ast"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"golang.org/x/tools/go/analysis"
@@ -156,11 +158,20 @@ func (t testFuncBlock) getGotName() string {
 
 // isRecommendedFailureMessage expects the name of the function followed by the output and want.
 func (t testFuncBlock) isRecommendedFailureMessage() bool {
-	// TODO(manuelarte):
-	// currentMessage := t.ifStmt.errorCallExpr.failureMessage
-	// funName := t.getFunctionName()
-	// match, _ := regexp.MatchString("p([a-z]+)ch", message)
-	return false
+	currentFailureMessage := t.ifStmt.errorCallExpr.failureMessage
+	funName := t.getFunctionName()
+
+	unquoted, err := strconv.Unquote(currentFailureMessage)
+	if err != nil {
+		unquoted = currentFailureMessage
+	}
+
+	quotedFunName := regexp.QuoteMeta(funName)
+	pattern := fmt.Sprintf(`^%s(?:|\(.*\)) = %%[^,]+, want %%[^,]+$`, quotedFunName)
+
+	matched, _ := regexp.MatchString(pattern, unquoted)
+
+	return matched
 }
 
 func (t testFuncBlock) expectedFailureMessage() string {

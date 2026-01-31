@@ -47,7 +47,7 @@ func TestIsRecommendedFailureMessage(t *testing.T) {
 
 			tfb := testFuncBlock{
 				testedFunc: testFuncStmt{
-					functionName: "YourFunction",
+					functionName: tc.functionName,
 				},
 				ifStmt: gotWantIfStmt{
 					errorCallExpr: tErrorfCallExpr{
