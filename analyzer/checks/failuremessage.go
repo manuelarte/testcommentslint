@@ -46,6 +46,10 @@ func (c FailureMessage) Check(pass *analysis.Pass, testFunc model.TestFunction) 
 				continue
 			}
 
+			if testBlock.isRecommendedFailureMessage() {
+				continue
+			}
+
 			diag := analysis.Diagnostic{
 				Pos:      testBlock.ifStmt.errorCallExpr.callExpr.Pos(),
 				End:      testBlock.ifStmt.errorCallExpr.callExpr.End(),
@@ -76,7 +80,8 @@ type (
 	testFuncStmt struct {
 		callExpr *ast.CallExpr
 
-		params []*ast.Ident
+		functionName string
+		params       []*ast.Ident
 	}
 
 	// gotWantIfStatement struct holding an if statement that contains a comparison of got and want.
@@ -98,7 +103,8 @@ type (
 	tErrorfCallExpr struct {
 		callExpr *ast.CallExpr
 
-		params []*ast.Ident
+		failureMessage string
+		params         []*ast.Ident
 	}
 )
 
@@ -120,7 +126,7 @@ func newTestFuncBlock(testVar string, prev ast.Stmt, ifStmt *ast.IfStmt) (testFu
 }
 
 func (t testFuncBlock) getFunctionName() string {
-	return t.testedFunc.getFunctionName()
+	return t.testedFunc.functionName
 }
 
 //nolint:unused // to be used later
@@ -139,6 +145,15 @@ func (t testFuncBlock) getGotName() string {
 
 	// impossible case
 	return "got"
+}
+
+// isRecommendedFailureMessage expects the name of the function followed by the output and want.
+func (t testFuncBlock) isRecommendedFailureMessage() bool {
+	// TODO(manuelarte):
+	// currentMessage := t.ifStmt.errorCallExpr.failureMessage
+	// funName := t.getFunctionName()
+	// match, _ := regexp.MatchString("p([a-z]+)ch", message)
+	return false
 }
 
 func (t testFuncBlock) expectedFailureMessage() string {
@@ -194,21 +209,10 @@ func newTestedFuncExpr(stmt ast.Stmt) (testFuncStmt, bool) {
 
 	return testFuncStmt{
 		callExpr: callExpr,
-		params:   params,
+
+		functionName: getFunctionName(callExpr.Fun),
+		params:       params,
 	}, true
-}
-
-func (t testFuncStmt) getFunctionName() string {
-	switch fn := t.callExpr.Fun.(type) {
-	case *ast.Ident:
-		return fn.Name
-	case *ast.SelectorExpr:
-		if ident, ok := fn.X.(*ast.Ident); ok {
-			return ident.Name + "." + fn.Sel.Name
-		}
-	}
-
-	return ""
 }
 
 // newGotWantIfStmt creates a new gotWantIfStmt.
@@ -304,8 +308,9 @@ func newTErrorfCallExpr(testVar string, stmt ast.Stmt) (tErrorfCallExpr, bool) {
 	}
 
 	return tErrorfCallExpr{
-		callExpr: callExpr,
-		params:   []*ast.Ident{firstIdent, secondIdent},
+		callExpr:       callExpr,
+		failureMessage: basicLit.Value,
+		params:         []*ast.Ident{firstIdent, secondIdent},
 	}, true
 }
 
@@ -320,4 +325,17 @@ func isNotBlankIdent(expr ast.Expr) (*ast.Ident, bool) {
 	}
 
 	return ident, true
+}
+
+func getFunctionName(expr ast.Expr) string {
+	switch fn := expr.(type) {
+	case *ast.Ident:
+		return fn.Name
+	case *ast.SelectorExpr:
+		if ident, ok := fn.X.(*ast.Ident); ok {
+			return ident.Name + "." + fn.Sel.Name
+		}
+	}
+
+	return ""
 }
