@@ -4,34 +4,17 @@ import (
 	"go/ast"
 )
 
-type ReflectImport struct {
-	is *ast.ImportSpec
-}
-
-func NewReflectImport(i *ast.ImportSpec) (*ReflectImport, bool) {
-	if i.Path == nil || i.Path.Value != "\"reflect\"" {
-		return nil, false
-	}
-
-	return &ReflectImport{is: i}, true
-}
-
-func (i ReflectImport) ImportName() string {
-	if i.is.Name != nil {
-		return i.is.Name.Name
-	}
-
-	return i.is.Path.Value[1 : len(i.is.Path.Value)-1]
-}
-
 // TestFunction is the holder of a test function declaration.
 // A test function must:
 // 1. Start with "Test".
 // 2. Have exactly one parameter.
 // 3. Have that parameter be of type *testing.T.
 type TestFunction struct {
-	// reflectImport import spec containing the "reflect" package
-	reflectImport *ReflectImport
+	// goCmpImport import spec containing go-cmp package. Nil if go-cmp is not imported.
+	goCmpImport *ast.ImportSpec
+	// reflectImport import spec containing the "reflect" package. Nil if reflect is not imported.
+	reflectImport *ast.ImportSpec
+
 	// funcDecl the original function declaration.
 	funcDecl *ast.FuncDecl
 
@@ -39,13 +22,14 @@ type TestFunction struct {
 	testVar string
 }
 
-func NewTestFunction(reflectImport *ReflectImport, funcDecl *ast.FuncDecl) (TestFunction, bool) {
+func NewTestFunction(goCmpImport, reflectImport *ast.ImportSpec, funcDecl *ast.FuncDecl) (TestFunction, bool) {
 	ok, testVar := isTestFunction(funcDecl)
 	if !ok {
 		return TestFunction{}, false
 	}
 
 	return TestFunction{
+		goCmpImport:   goCmpImport,
 		reflectImport: reflectImport,
 		funcDecl:      funcDecl,
 		testVar:       testVar,
@@ -57,7 +41,7 @@ func (t TestFunction) ReflectImportName() (string, bool) {
 		return "", false
 	}
 
-	return t.reflectImport.ImportName(), true
+	return importName(t.reflectImport), true
 }
 
 // GetActualTestBlockStmt returns the actual block test logic, if it's not a table-driven test

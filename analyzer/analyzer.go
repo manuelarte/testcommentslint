@@ -54,23 +54,28 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 		(*ast.FuncDecl)(nil),
 	}
 
-	var reflectImport *model.ReflectImport
+	var reflectImport *ast.ImportSpec
+	var goCmpImport *ast.ImportSpec
 
 	insp.Preorder(nodeFilter, func(n ast.Node) {
 		// Only process _test.go files
 		if !strings.HasSuffix(pass.Fset.File(n.Pos()).Name(), "_test.go") {
 			reflectImport = nil
+			goCmpImport = nil
 
 			return
 		}
 
 		switch node := n.(type) {
 		case *ast.ImportSpec:
-			if rf, ok := model.NewReflectImport(node); ok {
-				reflectImport = rf
+			if model.IsReflectImport(node) {
+				reflectImport = node
+			}
+			if model.IsGoCmpImport(node) {
+				goCmpImport = node
 			}
 		case *ast.FuncDecl:
-			testFunc, ok := model.NewTestFunction(reflectImport, node)
+			testFunc, ok := model.NewTestFunction(goCmpImport, reflectImport, node)
 			if !ok {
 				return
 			}

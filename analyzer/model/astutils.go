@@ -5,6 +5,33 @@ import (
 	"strings"
 )
 
+// IsReflectImport returns whether the ast.ImportSpec is from the reflect package.
+func IsReflectImport(i *ast.ImportSpec) bool {
+	if i.Path == nil || i.Path.Value != "\"reflect\"" {
+		return false
+	}
+
+	return true
+}
+
+// IsGoCmpImport returns whether the ast.ImportSpec is from go-cmp package.
+func IsGoCmpImport(i *ast.ImportSpec) bool {
+	if i.Path == nil || i.Path.Value != "\"github.com/google/go-cmp/cmp\"" {
+		return false
+	}
+
+	return true
+}
+
+// importName returns the import name for a package, either the actual name of the alias.
+func importName(is *ast.ImportSpec) string {
+	if is.Name != nil {
+		return is.Name.Name
+	}
+
+	return is.Path.Value[1 : len(is.Path.Value)-1]
+}
+
 //nolint:nestif // no need
 func isTestFunction(funcDecl *ast.FuncDecl) (bool, string) {
 	testMethodPackageType := "testing"
