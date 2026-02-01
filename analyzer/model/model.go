@@ -44,6 +44,14 @@ func (t TestFunction) ReflectImportName() (string, bool) {
 	return importName(t.reflectImport), true
 }
 
+func (t TestFunction) GoCmpImportName() (string, bool) {
+	if t.goCmpImport == nil {
+		return "", false
+	}
+
+	return importName(t.goCmpImport), true
+}
+
 // GetActualTestBlockStmt returns the actual block test logic, if it's not a table-driven test
 // it returns the actual body of the function, and if it's table-driven test it returns
 // the content inside the t.Run function.

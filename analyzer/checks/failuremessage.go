@@ -3,6 +3,7 @@ package checks
 import (
 	"fmt"
 	"go/ast"
+	"go/token"
 	"regexp"
 	"strconv"
 	"strings"
@@ -50,7 +51,10 @@ func (c FailureMessage) Check(pass *analysis.Pass, testFunc model.TestFunction) 
 				continue
 			}
 
-			testBlock, isTestBlock := newTestFuncBlock(testVar, stmts[i-1], ifStmt)
+			rf, _ := testFunc.ReflectImportName()
+			gcmp, _ := testFunc.GoCmpImportName()
+
+			testBlock, isTestBlock := newTestFuncBlock(gcmp, rf, testVar, stmts[i-1], ifStmt)
 			if !isTestBlock {
 				continue
 			}
@@ -79,6 +83,9 @@ type (
 	//   t.Errorf(...)
 	// }.
 	testFuncBlock struct {
+		goCmpImportAlias   string
+		reflectImportAlias string
+
 		// testedFunc contain the actual call to the function tested.
 		testedFunc testFuncStmt
 		// contain the got != want condition and the t.Errorf call.
@@ -117,8 +124,14 @@ type (
 	}
 )
 
-func newTestFuncBlock(testVar string, prev ast.Stmt, ifStmt *ast.IfStmt) (testFuncBlock, bool) {
-	gwStmt, isGotWant := newGotWantIfStmt(testVar, ifStmt)
+func newTestFuncBlock(
+	goCmpImportAlias string,
+	reflectImportAlias string,
+	testVar string,
+	prev ast.Stmt,
+	ifStmt *ast.IfStmt,
+) (testFuncBlock, bool) {
+	gwStmt, isGotWant := newGotWantIfStmt(goCmpImportAlias, reflectImportAlias, testVar, ifStmt)
 	if !isGotWant {
 		return testFuncBlock{}, false
 	}
@@ -129,8 +142,10 @@ func newTestFuncBlock(testVar string, prev ast.Stmt, ifStmt *ast.IfStmt) (testFu
 	}
 
 	return testFuncBlock{
-		testedFunc: testedFunc,
-		ifStmt:     gwStmt,
+		goCmpImportAlias:   goCmpImportAlias,
+		reflectImportAlias: reflectImportAlias,
+		testedFunc:         testedFunc,
+		ifStmt:             gwStmt,
 	}, true
 }
 
@@ -235,7 +250,14 @@ func newTestedFuncExpr(stmt ast.Stmt) (testFuncStmt, bool) {
 
 // newGotWantIfStmt creates a new gotWantIfStmt.
 // only if the condition applies.
-func newGotWantIfStmt(testVar string, ifStmt *ast.IfStmt) (gotWantIfStmt, bool) {
+//
+//nolint:gocognit // refactor later
+func newGotWantIfStmt(
+	goCmpImportAlias string,
+	reflectImportAlias string,
+	testVar string,
+	ifStmt *ast.IfStmt,
+) (gotWantIfStmt, bool) {
 	if ifStmt == nil || ifStmt.Body == nil {
 		return gotWantIfStmt{}, false
 	}
@@ -262,6 +284,38 @@ func newGotWantIfStmt(testVar string, ifStmt *ast.IfStmt) (gotWantIfStmt, bool) 
 
 		yIdent, isYIdent := isNotBlankIdent(node.Y)
 		if !isXIdent || !isYIdent {
+			return gotWantIfStmt{}, false
+		}
+
+		params[0] = xIdent
+		params[1] = yIdent
+	case *ast.UnaryExpr:
+		if node.Op != token.NOT {
+			return gotWantIfStmt{}, false
+		}
+
+		callExpr, ok := node.X.(*ast.CallExpr)
+		if !ok {
+			return gotWantIfStmt{}, false
+		}
+
+		if len(callExpr.Args) != 2 {
+			return gotWantIfStmt{}, false
+		}
+
+		xIdent, isXIdent := isNotBlankIdent(callExpr.Args[0])
+
+		yIdent, isYIdent := isNotBlankIdent(callExpr.Args[1])
+		if !isXIdent || !isYIdent {
+			return gotWantIfStmt{}, false
+		}
+
+		selectorExpr, ok := callExpr.Fun.(*ast.SelectorExpr)
+		if !ok {
+			return gotWantIfStmt{}, false
+		}
+
+		if !isGoCmpEqual(goCmpImportAlias, selectorExpr) && !isReflectEqual(reflectImportAlias, selectorExpr) {
 			return gotWantIfStmt{}, false
 		}
 
@@ -356,4 +410,32 @@ func getFunctionName(expr ast.Expr) string {
 	}
 
 	return ""
+}
+
+func isReflectEqual(reflectImportAlias string, se *ast.SelectorExpr) bool {
+	if se == nil {
+		return false
+	}
+
+	if ident, ok := se.X.(*ast.Ident); ok {
+		if ident.Name == reflectImportAlias && se.Sel.Name == "DeepEqual" {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isGoCmpEqual(goCmpImportAlias string, se *ast.SelectorExpr) bool {
+	if se == nil {
+		return false
+	}
+
+	if ident, ok := se.X.(*ast.Ident); ok {
+		if ident.Name == goCmpImportAlias && se.Sel.Name == "Equal" {
+			return true
+		}
+	}
+
+	return false
 }

@@ -54,8 +54,10 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 		(*ast.FuncDecl)(nil),
 	}
 
-	var reflectImport *ast.ImportSpec
-	var goCmpImport *ast.ImportSpec
+	var (
+		reflectImport *ast.ImportSpec
+		goCmpImport   *ast.ImportSpec
+	)
 
 	insp.Preorder(nodeFilter, func(n ast.Node) {
 		// Only process _test.go files
@@ -71,6 +73,7 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 			if model.IsReflectImport(node) {
 				reflectImport = node
 			}
+
 			if model.IsGoCmpImport(node) {
 				goCmpImport = node
 			}

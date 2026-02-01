@@ -29,7 +29,10 @@ func importName(is *ast.ImportSpec) string {
 		return is.Name.Name
 	}
 
-	return is.Path.Value[1 : len(is.Path.Value)-1]
+	unquoted := is.Path.Value[1 : len(is.Path.Value)-1]
+	parts := strings.Split(unquoted, "/")
+
+	return parts[len(parts)-1]
 }
 
 //nolint:nestif // no need
