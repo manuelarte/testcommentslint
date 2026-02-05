@@ -54,16 +54,12 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 		(*ast.FuncDecl)(nil),
 	}
 
-	var (
-		reflectImport *ast.ImportSpec
-		goCmpImport   *ast.ImportSpec
-	)
+	var importGroup model.ImportGroup
 
 	insp.Preorder(nodeFilter, func(n ast.Node) {
 		// Only process _test.go files
 		if !strings.HasSuffix(pass.Fset.File(n.Pos()).Name(), "_test.go") {
-			reflectImport = nil
-			goCmpImport = nil
+			importGroup = model.ImportGroup{}
 
 			return
 		}
@@ -71,14 +67,14 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 		switch node := n.(type) {
 		case *ast.ImportSpec:
 			if model.IsReflectImport(node) {
-				reflectImport = node
+				importGroup.Reflect = node
 			}
 
 			if model.IsGoCmpImport(node) {
-				goCmpImport = node
+				importGroup.GoCmp = node
 			}
 		case *ast.FuncDecl:
-			testFunc, ok := model.NewTestFunction(goCmpImport, reflectImport, node)
+			testFunc, ok := model.NewTestFunction(importGroup, node)
 			if !ok {
 				return
 			}

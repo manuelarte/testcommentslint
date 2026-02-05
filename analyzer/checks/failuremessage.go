@@ -15,8 +15,8 @@ import (
 
 // FailureMessage check that the failure messages in t.Errorf follow the format expected.
 // The format expected can be as the following:
-//   - when the condition is reflect.DeepEqual, cmp.Equal or got != want: "YourFunction(%v) = %v, want %v"
-//   - when the condition is cmp.Diff: YourFunction(%v) mismatch (-want +got):\n%s
+//   - When the condition is `reflect.DeepEqual`, `cmp.Equal` or `got != want`: "YourFunction(%v) = %v, want %v"
+//   - When the condition is `cmp.Diff`: YourFunction(%v) mismatch (-want +got):\n%s
 //
 // This checks blocks like the following:
 // got := MyFunction(in)

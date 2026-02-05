@@ -4,52 +4,59 @@ import (
 	"go/ast"
 )
 
-// TestFunction is the holder of a test function declaration.
-// A test function must:
-// 1. Start with "Test".
-// 2. Have exactly one parameter.
-// 3. Have that parameter be of type *testing.T.
-type TestFunction struct {
-	// goCmpImport import spec containing go-cmp package. Nil if go-cmp is not imported.
-	goCmpImport *ast.ImportSpec
-	// reflectImport import spec containing the "reflect" package. Nil if reflect is not imported.
-	reflectImport *ast.ImportSpec
+type (
+	// TestFunction is the holder of a test function declaration.
+	// A test function must:
+	// 1. Start with "Test".
+	// 2. Have exactly one parameter.
+	// 3. Have that parameter be of type *testing.T.
+	TestFunction struct {
+		// importGroup contains the import important on this test.
+		importGroup ImportGroup
 
-	// funcDecl the original function declaration.
-	funcDecl *ast.FuncDecl
+		// funcDecl the original function declaration.
+		funcDecl *ast.FuncDecl
 
-	// testVar is the name given to the testing.T parameter
-	testVar string
-}
+		// testVar is the name given to the testing.T parameter
+		testVar string
+	}
 
-func NewTestFunction(goCmpImport, reflectImport *ast.ImportSpec, funcDecl *ast.FuncDecl) (TestFunction, bool) {
+	// ImportGroup contains the imports that are important for the test.
+	ImportGroup struct {
+		// GoCmp import spec containing go-cmp package. Nil if go-cmp is not imported.
+		GoCmp *ast.ImportSpec
+		// Reflect import spec containing the "reflect" package. Nil if reflect is not imported.
+		Reflect *ast.ImportSpec
+	}
+)
+
+func NewTestFunction(importGroup ImportGroup, funcDecl *ast.FuncDecl) (TestFunction, bool) {
 	ok, testVar := isTestFunction(funcDecl)
 	if !ok {
 		return TestFunction{}, false
 	}
 
 	return TestFunction{
-		goCmpImport:   goCmpImport,
-		reflectImport: reflectImport,
-		funcDecl:      funcDecl,
-		testVar:       testVar,
+		importGroup: importGroup,
+		funcDecl:    funcDecl,
+		testVar:     testVar,
 	}, true
 }
 
 func (t TestFunction) ReflectImportName() (string, bool) {
-	if t.reflectImport == nil {
+	if t.importGroup.Reflect == nil {
 		return "", false
 	}
 
-	return importName(t.reflectImport), true
+	return importName(t.importGroup.Reflect), true
 }
 
 func (t TestFunction) GoCmpImportName() (string, bool) {
-	if t.goCmpImport == nil {
+	if t.importGroup.GoCmp == nil {
 		return "", false
 	}
 
-	return importName(t.goCmpImport), true
+	return importName(t.importGroup.GoCmp), true
 }
 
 // GetActualTestBlockStmt returns the actual block test logic, if it's not a table-driven test
