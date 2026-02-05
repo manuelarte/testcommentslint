@@ -2,6 +2,7 @@
 package analyzer
 
 import (
+	"fmt"
 	"go/ast"
 	"strings"
 
@@ -42,6 +43,7 @@ type testcommentslint struct {
 	failureMessage     bool
 }
 
+//nolint:gocognit // refactor later
 func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 	insp, found := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 	if !found {
@@ -52,6 +54,12 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 	nodeFilter := []ast.Node{
 		(*ast.ImportSpec)(nil),
 		(*ast.FuncDecl)(nil),
+	}
+
+	// TODO
+	_, err := checks.NewTableDrivenFormat(checks.AlwaysValid())
+	if err != nil {
+		return nil, fmt.Errorf("error creating table driven format checker: %w", err)
 	}
 
 	var importGroup model.ImportGroup
