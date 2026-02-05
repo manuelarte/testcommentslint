@@ -180,6 +180,7 @@ func (t testFuncBlock) getGotName() string {
 // isRecommendedFailureMessage expects the name of the function followed by the output and want.
 func (t testFuncBlock) isRecommendedFailureMessage() bool {
 	currentFailureMessage := t.ifStmt.errorCallExpr.failureMessage
+
 	unquoted, err := strconv.Unquote(currentFailureMessage)
 	if err != nil {
 		unquoted = currentFailureMessage
@@ -197,6 +198,7 @@ func (t testFuncBlock) isRecommendedFailureMessage() bool {
 	case diff:
 		pattern := `(?:-want \+got|\(-want \+got\)):\n%s$`
 		matched, _ := regexp.MatchString(pattern, unquoted)
+
 		return matched
 	}
 
