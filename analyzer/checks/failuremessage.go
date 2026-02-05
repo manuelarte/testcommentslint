@@ -51,6 +51,10 @@ func (c FailureMessage) Check(pass *analysis.Pass, testFunc model.TestFunction) 
 				continue
 			}
 
+			// create an auxiliary testBlock struct that holds:
+			// - if statement
+			// - the t.Errorf call
+			// - the tested function previous to the if statement
 			testBlock, isTestBlock := newTestFuncBlock(testFunc.ImportGroup(), testVar, stmts[i-1], ifStmt)
 			if !isTestBlock {
 				continue
@@ -72,8 +76,15 @@ func (c FailureMessage) Check(pass *analysis.Pass, testFunc model.TestFunction) 
 	}
 }
 
+const (
+	equal ifConditionType = ifConditionType("equal")
+	diff  ifConditionType = ifConditionType("diff")
+)
+
 // Auxiliary structs to facilitate the business logic.
 type (
+	ifConditionType string
+
 	// testFuncBlock is a struct that holds the typical testing block like:
 	// got := myFunction(in)
 	// if got != want {
@@ -107,6 +118,7 @@ type (
 		// original ifStmt
 		ifStmt *ast.IfStmt
 
+		ifType        ifConditionType
 		params        []*ast.Ident
 		errorCallExpr tErrorfCallExpr
 	}
@@ -264,11 +276,13 @@ func newGotWantIfStmt(
 		return gotWantIfStmt{}, false
 	}
 
+	var ifType ifConditionType
+
 	params := make([]*ast.Ident, 2)
 
 	switch node := ifStmt.Cond.(type) {
 	case *ast.BinaryExpr:
-		// check ident1 != ident2 and both are used in the failure message t.Errorf
+		// check "ident1 != ident2" and both are used in the failure message `t.Errorf`.
 		if node.Op.String() != "!=" {
 			return gotWantIfStmt{}, false
 		}
@@ -280,9 +294,11 @@ func newGotWantIfStmt(
 			return gotWantIfStmt{}, false
 		}
 
+		ifType = equal
 		params[0] = xIdent
 		params[1] = yIdent
 	case *ast.UnaryExpr:
+		// check either `!reflect.DeepEqual` or `!cmp.Equal` and both are used in the failure message `t.Errorf`.
 		if node.Op != token.NOT {
 			return gotWantIfStmt{}, false
 		}
@@ -315,6 +331,7 @@ func newGotWantIfStmt(
 			return gotWantIfStmt{}, false
 		}
 
+		ifType = equal
 		params[0] = xIdent
 		params[1] = yIdent
 	default:
@@ -332,6 +349,7 @@ func newGotWantIfStmt(
 
 	return gotWantIfStmt{
 		ifStmt:        ifStmt,
+		ifType:        ifType,
 		params:        params,
 		errorCallExpr: teCallExpr,
 	}, true
