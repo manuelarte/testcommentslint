@@ -179,16 +179,15 @@ func (t testFuncBlock) getGotName() string {
 
 // isRecommendedFailureMessage expects the name of the function followed by the output and want.
 func (t testFuncBlock) isRecommendedFailureMessage() bool {
+	currentFailureMessage := t.ifStmt.errorCallExpr.failureMessage
+	unquoted, err := strconv.Unquote(currentFailureMessage)
+	if err != nil {
+		unquoted = currentFailureMessage
+	}
+
 	switch t.ifStmt.ifType {
 	case equal:
-		currentFailureMessage := t.ifStmt.errorCallExpr.failureMessage
 		funName := t.getFunctionName()
-
-		unquoted, err := strconv.Unquote(currentFailureMessage)
-		if err != nil {
-			unquoted = currentFailureMessage
-		}
-
 		quotedFunName := regexp.QuoteMeta(funName)
 		pattern := fmt.Sprintf(`^%s(?:|\(.*\)) = %%[^,]+, want %%[^,]+$`, quotedFunName)
 
@@ -196,8 +195,9 @@ func (t testFuncBlock) isRecommendedFailureMessage() bool {
 
 		return matched
 	case diff:
-		// TODO(manuelarte): implement expected failure message
-		return false
+		pattern := `(?:-want \+got|\(-want \+got\)):\n%s$`
+		matched, _ := regexp.MatchString(pattern, unquoted)
+		return matched
 	}
 
 	return true
@@ -219,6 +219,10 @@ func (t testFuncBlock) expectedFailureMessage() string {
 	}
 
 	funcFailurePart := fmt.Sprintf("%s(%s) = %s", t.getFunctionName(), strings.Join(in, ", "), strings.Join(out, ", "))
+
+	if t.ifStmt.ifType == diff {
+		return "Prefer \"diff -want +got:\\n%s\" format for this failure message"
+	}
 
 	return fmt.Sprintf("Prefer \"%s, want %%v\" format for this failure message", funcFailurePart)
 }
@@ -298,7 +302,7 @@ func newGotWantIfStmt(
 			errorCallExpr: teCallExpr,
 		}, true
 	}
-	// TODO
+
 	// case cmp.Diff
 	diffParam, ok := newDiffParamIfStmt(importGroup, ifStmt)
 	if !ok {
@@ -311,24 +315,6 @@ func newGotWantIfStmt(
 		params:        []*ast.Ident{diffParam},
 		errorCallExpr: teCallExpr,
 	}, true
-	/*
-		// TODO: FIX THIS
-		// check params match
-		if params[0].Name != teCallExpr.params[0].Name && params[0].Name != teCallExpr.params[1].Name {
-			return gotWantIfStmt{}, false
-		}
-
-		if params[1].Name != teCallExpr.params[0].Name && params[1].Name != teCallExpr.params[1].Name {
-			return gotWantIfStmt{}, false
-		}
-
-		return gotWantIfStmt{
-			ifStmt:        ifStmt,
-			ifType:        ifType,
-			params:        params,
-			errorCallExpr: teCallExpr,
-		}, true
-	*/
 }
 
 func newEqualGotWantParamsIfStmt(importGroup model.ImportGroup, cond ast.Expr) ([]*ast.Ident, bool) {
