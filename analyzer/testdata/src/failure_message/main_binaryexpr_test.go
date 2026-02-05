@@ -23,7 +23,7 @@ func TestSum(t *testing.T) {
 	want := 2
 	got := double(1)
 	if got != want {
-		t.Errorf("got %v, want %v", got, want) // want `Prefer "double\(%v\) = %v, want %v" format for a failure message`
+		t.Errorf("got %v, want %v", got, want) // want `Prefer "double\(%v\) = %v, want %v" format for this failure message`
 	}
 }
 
@@ -33,7 +33,7 @@ func TestSumAndBool(t *testing.T) {
 	want := 2
 	got, _ := sumAndBool(1, 1)
 	if got != want {
-		t.Errorf("got %v, want %v", got, want) // want `Prefer "sumAndBool\(%v, %v\) = %v, _, want %v" format for a failure message`
+		t.Errorf("got %v, want %v", got, want) // want `Prefer "sumAndBool\(%v, %v\) = %v, _, want %v" format for this failure message`
 	}
 }
 
@@ -43,6 +43,6 @@ func TestPrintHelloWorld(t *testing.T) {
 	want := 10
 	got, _ := printHelloWorld()
 	if got != want {
-		t.Errorf("got %v, want %v", got, want) // want `Prefer "printHelloWorld\(\) = %v, _, want %v" format for a failure message`
+		t.Errorf("got %v, want %v", got, want) // want `Prefer "printHelloWorld\(\) = %v, _, want %v" format for this failure message`
 	}
 }

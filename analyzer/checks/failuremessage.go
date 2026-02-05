@@ -179,20 +179,28 @@ func (t testFuncBlock) getGotName() string {
 
 // isRecommendedFailureMessage expects the name of the function followed by the output and want.
 func (t testFuncBlock) isRecommendedFailureMessage() bool {
-	currentFailureMessage := t.ifStmt.errorCallExpr.failureMessage
-	funName := t.getFunctionName()
+	switch t.ifStmt.ifType {
+	case equal:
+		currentFailureMessage := t.ifStmt.errorCallExpr.failureMessage
+		funName := t.getFunctionName()
 
-	unquoted, err := strconv.Unquote(currentFailureMessage)
-	if err != nil {
-		unquoted = currentFailureMessage
+		unquoted, err := strconv.Unquote(currentFailureMessage)
+		if err != nil {
+			unquoted = currentFailureMessage
+		}
+
+		quotedFunName := regexp.QuoteMeta(funName)
+		pattern := fmt.Sprintf(`^%s(?:|\(.*\)) = %%[^,]+, want %%[^,]+$`, quotedFunName)
+
+		matched, _ := regexp.MatchString(pattern, unquoted)
+
+		return matched
+	case diff:
+		// TODO(manuelarte): implement expected failure message
+		return false
 	}
 
-	quotedFunName := regexp.QuoteMeta(funName)
-	pattern := fmt.Sprintf(`^%s(?:|\(.*\)) = %%[^,]+, want %%[^,]+$`, quotedFunName)
-
-	matched, _ := regexp.MatchString(pattern, unquoted)
-
-	return matched
+	return true
 }
 
 func (t testFuncBlock) expectedFailureMessage() string {
@@ -212,7 +220,7 @@ func (t testFuncBlock) expectedFailureMessage() string {
 
 	funcFailurePart := fmt.Sprintf("%s(%s) = %s", t.getFunctionName(), strings.Join(in, ", "), strings.Join(out, ", "))
 
-	return fmt.Sprintf("Prefer \"%s, want %%v\" format for a failure message", funcFailurePart)
+	return fmt.Sprintf("Prefer \"%s, want %%v\" format for this failure message", funcFailurePart)
 }
 
 // newTestedFuncExpr creates a testedFuncStmt after checking that the stmt is a typical function call.
@@ -257,7 +265,7 @@ func newTestedFuncExpr(stmt ast.Stmt) (testFuncStmt, bool) {
 // newGotWantIfStmt creates a new gotWantIfStmt.
 // only if the condition applies.
 //
-//nolint:gocognit // refactor later
+
 func newGotWantIfStmt(
 	importGroup model.ImportGroup,
 	testVar string,
@@ -276,83 +284,190 @@ func newGotWantIfStmt(
 		return gotWantIfStmt{}, false
 	}
 
-	var ifType ifConditionType
+	if ifStmt.Init == nil {
+		// case got != equal and !reflect.DeepEqual or !cmp.Equal
+		params, ok := newEqualGotWantParamsIfStmt(importGroup, ifStmt.Cond)
+		if !ok {
+			return gotWantIfStmt{}, false
+		}
 
+		return gotWantIfStmt{
+			ifStmt:        ifStmt,
+			ifType:        equal,
+			params:        params,
+			errorCallExpr: teCallExpr,
+		}, true
+	}
+	// TODO
+	// case cmp.Diff
+	diffParam, ok := newDiffParamIfStmt(importGroup, ifStmt)
+	if !ok {
+		return gotWantIfStmt{}, false
+	}
+
+	return gotWantIfStmt{
+		ifStmt:        ifStmt,
+		ifType:        diff,
+		params:        []*ast.Ident{diffParam},
+		errorCallExpr: teCallExpr,
+	}, true
+	/*
+		// TODO: FIX THIS
+		// check params match
+		if params[0].Name != teCallExpr.params[0].Name && params[0].Name != teCallExpr.params[1].Name {
+			return gotWantIfStmt{}, false
+		}
+
+		if params[1].Name != teCallExpr.params[0].Name && params[1].Name != teCallExpr.params[1].Name {
+			return gotWantIfStmt{}, false
+		}
+
+		return gotWantIfStmt{
+			ifStmt:        ifStmt,
+			ifType:        ifType,
+			params:        params,
+			errorCallExpr: teCallExpr,
+		}, true
+	*/
+}
+
+func newEqualGotWantParamsIfStmt(importGroup model.ImportGroup, cond ast.Expr) ([]*ast.Ident, bool) {
 	params := make([]*ast.Ident, 2)
 
-	switch node := ifStmt.Cond.(type) {
+	switch node := cond.(type) {
 	case *ast.BinaryExpr:
 		// check "ident1 != ident2" and both are used in the failure message `t.Errorf`.
 		if node.Op.String() != "!=" {
-			return gotWantIfStmt{}, false
+			return nil, false
 		}
 
 		xIdent, isXIdent := isNotBlankIdent(node.X)
 
 		yIdent, isYIdent := isNotBlankIdent(node.Y)
 		if !isXIdent || !isYIdent {
-			return gotWantIfStmt{}, false
+			return nil, false
 		}
 
-		ifType = equal
 		params[0] = xIdent
 		params[1] = yIdent
 	case *ast.UnaryExpr:
 		// check either `!reflect.DeepEqual` or `!cmp.Equal` and both are used in the failure message `t.Errorf`.
 		if node.Op != token.NOT {
-			return gotWantIfStmt{}, false
+			return nil, false
 		}
 
 		callExpr, ok := node.X.(*ast.CallExpr)
 		if !ok {
-			return gotWantIfStmt{}, false
+			return nil, false
 		}
 
 		if len(callExpr.Args) != 2 {
-			return gotWantIfStmt{}, false
+			return nil, false
 		}
 
 		xIdent, isXIdent := isNotBlankIdent(callExpr.Args[0])
 
 		yIdent, isYIdent := isNotBlankIdent(callExpr.Args[1])
 		if !isXIdent || !isYIdent {
-			return gotWantIfStmt{}, false
+			return nil, false
 		}
 
 		selectorExpr, ok := callExpr.Fun.(*ast.SelectorExpr)
 		if !ok {
-			return gotWantIfStmt{}, false
+			return nil, false
 		}
 
 		goCmpImportAlias, _ := importGroup.GoCmpImportName()
 		reflectImportAlias, _ := importGroup.ReflectImportName()
 
 		if !isGoCmpEqual(goCmpImportAlias, selectorExpr) && !isReflectEqual(reflectImportAlias, selectorExpr) {
-			return gotWantIfStmt{}, false
+			return nil, false
 		}
 
-		ifType = equal
 		params[0] = xIdent
 		params[1] = yIdent
 	default:
-		return gotWantIfStmt{}, false
+		return nil, false
 	}
 
-	// check params match
-	if params[0].Name != teCallExpr.params[0].Name && params[0].Name != teCallExpr.params[1].Name {
-		return gotWantIfStmt{}, false
+	return params, true
+}
+
+//nolint:gocognit // refactor later
+func newDiffParamIfStmt(importGroup model.ImportGroup, ifStmt *ast.IfStmt) (*ast.Ident, bool) {
+	var diffParam *ast.Ident
+
+	switch node := ifStmt.Init.(type) {
+	case *ast.AssignStmt:
+		if len(node.Lhs) != 1 {
+			return nil, false
+		}
+
+		ident, ok := node.Lhs[0].(*ast.Ident)
+		if !ok {
+			return nil, false
+		}
+
+		if len(node.Rhs) != 1 {
+			return nil, false
+		}
+
+		callExpr, ok := node.Rhs[0].(*ast.CallExpr)
+		if !ok {
+			return nil, false
+		}
+
+		if len(callExpr.Args) != 2 {
+			return nil, false
+		}
+
+		_, isXIdent := isNotBlankIdent(callExpr.Args[0])
+
+		_, isYIdent := isNotBlankIdent(callExpr.Args[1])
+		if !isXIdent || !isYIdent {
+			return nil, false
+		}
+
+		selectorExpr, ok := callExpr.Fun.(*ast.SelectorExpr)
+		if !ok {
+			return nil, false
+		}
+
+		goCmpImportAlias, _ := importGroup.GoCmpImportName()
+
+		if !isGoCmpDiff(goCmpImportAlias, selectorExpr) {
+			return nil, false
+		}
+
+		diffParam = ident
+	default:
+		return nil, false
 	}
 
-	if params[1].Name != teCallExpr.params[0].Name && params[1].Name != teCallExpr.params[1].Name {
-		return gotWantIfStmt{}, false
+	switch node := ifStmt.Cond.(type) {
+	case *ast.BinaryExpr:
+		// check "ident1 != ident2" and both are used in the failure message `t.Errorf`.
+		if node.Op.String() != "!=" {
+			return nil, false
+		}
+
+		xIdent, isXIdent := isNotBlankIdent(node.X)
+		if !isXIdent {
+			return nil, false
+		}
+
+		if basicLit, isBasicLit := node.Y.(*ast.BasicLit); !isBasicLit || basicLit.Value != "\"\"" {
+			return nil, false
+		}
+
+		if xIdent.Name != diffParam.Name {
+			return nil, false
+		}
+	default:
+		return nil, false
 	}
 
-	return gotWantIfStmt{
-		ifStmt:        ifStmt,
-		ifType:        ifType,
-		params:        params,
-		errorCallExpr: teCallExpr,
-	}, true
+	return diffParam, true
 }
 
 // newTErrorfCallExpr creates a tErrorfCallExpr after checking that the stmt is a call to t.Errorf.
@@ -377,7 +492,7 @@ func newTErrorfCallExpr(testVar string, stmt ast.Stmt) (tErrorfCallExpr, bool) {
 		return tErrorfCallExpr{}, false
 	}
 
-	if len(callExpr.Args) != 3 {
+	if len(callExpr.Args) < 2 {
 		return tErrorfCallExpr{}, false
 	}
 
@@ -386,17 +501,21 @@ func newTErrorfCallExpr(testVar string, stmt ast.Stmt) (tErrorfCallExpr, bool) {
 		return tErrorfCallExpr{}, false
 	}
 
-	firstIdent, isFirstIdent := callExpr.Args[1].(*ast.Ident)
+	params := make([]*ast.Ident, 0)
 
-	secondIdent, isSecondIdent := callExpr.Args[2].(*ast.Ident)
-	if !isFirstIdent || !isSecondIdent {
-		return tErrorfCallExpr{}, false
+	for i := 1; len(callExpr.Args) > i; i++ {
+		paramIdent, isParamIdent := callExpr.Args[i].(*ast.Ident)
+		if !isParamIdent {
+			return tErrorfCallExpr{}, false
+		}
+
+		params = append(params, paramIdent)
 	}
 
 	return tErrorfCallExpr{
 		callExpr:       callExpr,
 		failureMessage: basicLit.Value,
-		params:         []*ast.Ident{firstIdent, secondIdent},
+		params:         params,
 	}, true
 }
 
@@ -447,6 +566,20 @@ func isGoCmpEqual(goCmpImportAlias string, se *ast.SelectorExpr) bool {
 
 	if ident, ok := se.X.(*ast.Ident); ok {
 		if ident.Name == goCmpImportAlias && se.Sel.Name == "Equal" {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isGoCmpDiff(goCmpImportAlias string, se *ast.SelectorExpr) bool {
+	if se == nil {
+		return false
+	}
+
+	if ident, ok := se.X.(*ast.Ident); ok {
+		if ident.Name == goCmpImportAlias && se.Sel.Name == "Diff" {
 			return true
 		}
 	}
