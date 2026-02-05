@@ -35,6 +35,7 @@ func NewFailureMessage() FailureMessage {
 	}
 }
 
+// Check checks that the failure messages in t.Errorf follow the format expected.
 func (c FailureMessage) Check(pass *analysis.Pass, testFunc model.TestFunction) {
 	blStmt := testFunc.GetActualTestBlockStmt()
 	testVar := testFunc.GetTestVar()
@@ -46,15 +47,11 @@ func (c FailureMessage) Check(pass *analysis.Pass, testFunc model.TestFunction) 
 
 	for i, stmt := range stmts {
 		if ifStmt, ok := stmt.(*ast.IfStmt); ok {
-			// Check the condition to see if it's a comparison like got != want
 			if i == 0 {
 				continue
 			}
 
-			rf, _ := testFunc.ReflectImportName()
-			gcmp, _ := testFunc.GoCmpImportName()
-
-			testBlock, isTestBlock := newTestFuncBlock(gcmp, rf, testVar, stmts[i-1], ifStmt)
+			testBlock, isTestBlock := newTestFuncBlock(testFunc.ImportGroup(), testVar, stmts[i-1], ifStmt)
 			if !isTestBlock {
 				continue
 			}
@@ -83,8 +80,7 @@ type (
 	//   t.Errorf(...)
 	// }.
 	testFuncBlock struct {
-		goCmpImportAlias   string
-		reflectImportAlias string
+		importGroup model.ImportGroup
 
 		// testedFunc contain the actual call to the function tested.
 		testedFunc testFuncStmt
@@ -125,13 +121,12 @@ type (
 )
 
 func newTestFuncBlock(
-	goCmpImportAlias string,
-	reflectImportAlias string,
+	importGroup model.ImportGroup,
 	testVar string,
 	prev ast.Stmt,
 	ifStmt *ast.IfStmt,
 ) (testFuncBlock, bool) {
-	gwStmt, isGotWant := newGotWantIfStmt(goCmpImportAlias, reflectImportAlias, testVar, ifStmt)
+	gwStmt, isGotWant := newGotWantIfStmt(importGroup, testVar, ifStmt)
 	if !isGotWant {
 		return testFuncBlock{}, false
 	}
@@ -142,10 +137,9 @@ func newTestFuncBlock(
 	}
 
 	return testFuncBlock{
-		goCmpImportAlias:   goCmpImportAlias,
-		reflectImportAlias: reflectImportAlias,
-		testedFunc:         testedFunc,
-		ifStmt:             gwStmt,
+		importGroup: importGroup,
+		testedFunc:  testedFunc,
+		ifStmt:      gwStmt,
 	}, true
 }
 
@@ -253,8 +247,7 @@ func newTestedFuncExpr(stmt ast.Stmt) (testFuncStmt, bool) {
 //
 //nolint:gocognit // refactor later
 func newGotWantIfStmt(
-	goCmpImportAlias string,
-	reflectImportAlias string,
+	importGroup model.ImportGroup,
 	testVar string,
 	ifStmt *ast.IfStmt,
 ) (gotWantIfStmt, bool) {
@@ -314,6 +307,9 @@ func newGotWantIfStmt(
 		if !ok {
 			return gotWantIfStmt{}, false
 		}
+
+		goCmpImportAlias, _ := importGroup.GoCmpImportName()
+		reflectImportAlias, _ := importGroup.ReflectImportName()
 
 		if !isGoCmpEqual(goCmpImportAlias, selectorExpr) && !isReflectEqual(reflectImportAlias, selectorExpr) {
 			return gotWantIfStmt{}, false

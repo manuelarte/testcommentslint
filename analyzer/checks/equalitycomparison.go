@@ -22,7 +22,7 @@ func NewEqualityComparison() EqualityComparison {
 
 //nolint:gocritic // still under development
 func (c EqualityComparison) Check(pass *analysis.Pass, testFunc model.TestFunction) {
-	reflectImportName, ok := testFunc.ReflectImportName()
+	reflectImportName, ok := testFunc.ImportGroup().ReflectImportName()
 	if !ok {
 		return
 	}

@@ -43,20 +43,8 @@ func NewTestFunction(importGroup ImportGroup, funcDecl *ast.FuncDecl) (TestFunct
 	}, true
 }
 
-func (t TestFunction) ReflectImportName() (string, bool) {
-	if t.importGroup.Reflect == nil {
-		return "", false
-	}
-
-	return importName(t.importGroup.Reflect), true
-}
-
-func (t TestFunction) GoCmpImportName() (string, bool) {
-	if t.importGroup.GoCmp == nil {
-		return "", false
-	}
-
-	return importName(t.importGroup.GoCmp), true
+func (t TestFunction) ImportGroup() ImportGroup {
+	return t.importGroup
 }
 
 // GetActualTestBlockStmt returns the actual block test logic, if it's not a table-driven test
@@ -73,4 +61,20 @@ func (t TestFunction) GetActualTestBlockStmt() *ast.BlockStmt {
 // GetTestVar returns the name of the testing.T parameter.
 func (t TestFunction) GetTestVar() string {
 	return t.testVar
+}
+
+func (i ImportGroup) ReflectImportName() (string, bool) {
+	if i.Reflect == nil {
+		return "", false
+	}
+
+	return importName(i.Reflect), true
+}
+
+func (i ImportGroup) GoCmpImportName() (string, bool) {
+	if i.GoCmp == nil {
+		return "", false
+	}
+
+	return importName(i.GoCmp), true
 }
