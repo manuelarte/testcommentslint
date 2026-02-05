@@ -47,6 +47,30 @@ func TestIsRecommendedFailureMessage(t *testing.T) {
 			functionName:   "MyFunction",
 			want:           false,
 		},
+		"diff, expecting -want +got:\\n%s": {
+			failureMessage: "diff: %s",
+			ifType:         equal,
+			functionName:   "MyFunction",
+			want:           false,
+		},
+		"diff with function name, with (-want +got):\\n%s": {
+			failureMessage: "MyFunction mismatch (-want +got):\n%s",
+			ifType:         equal,
+			functionName:   "MyFunction",
+			want:           true,
+		},
+		"diff with function name, with -want +got:\\n%s": {
+			failureMessage: "MyFunction mismatch -want +got:\n%s",
+			ifType:         equal,
+			functionName:   "MyFunction",
+			want:           true,
+		},
+		"diff without function name, with -want +got:\\n%s": {
+			failureMessage: "diff -want +got:\n%s",
+			ifType:         equal,
+			functionName:   "MyFunction",
+			want:           true,
+		},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
