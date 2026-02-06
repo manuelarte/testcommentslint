@@ -15,8 +15,10 @@ import (
 )
 
 const (
-	EqualityComparisonCheckName = "equality-comparison"
-	FailureMessageCheckName     = "failure-message"
+	EqualityComparisonCheckName      = "equality-comparison"
+	FailureMessageCheckName          = "failure-message"
+	TableDrivenFormatCheckTypeName   = "table-driven-format.type"
+	TableDrivenFormatCheckInlineName = "table-driven-format.inline"
 )
 
 func New() *analysis.Analyzer {
@@ -34,13 +36,34 @@ func New() *analysis.Analyzer {
 		"Checks reflect.DeepEqual can be replaced by newer cmp.Equal.")
 	a.Flags.BoolVar(&l.failureMessage, FailureMessageCheckName, true,
 		"Check that the failure messages in t.Errorf follow the format expected.")
+	a.Flags.StringVar(&l.tableDrivenFormat.formatType, TableDrivenFormatCheckTypeName, "",
+		"Check that the table-driven tests are either Map or Slice.")
+	a.Flags.BoolVar(&l.tableDrivenFormat.inline, TableDrivenFormatCheckInlineName, false,
+		"Check that the table-driven tests are either inline or declared before.")
 
 	return a
 }
 
-type testcommentslint struct {
-	equalityComparison bool
-	failureMessage     bool
+type (
+	testcommentslint struct {
+		equalityComparison bool
+		failureMessage     bool
+		tableDrivenFormat  tableDrivenFormat
+	}
+	tableDrivenFormat struct {
+		formatType string
+		inline     bool
+	}
+)
+
+func (t tableDrivenFormat) getTableDrivenFormatPredicate() checks.TableDrivenFormatPredicate {
+	f := checks.TableDrivenFormatType(t.formatType)
+	if f != checks.Map && f != checks.Slice {
+		return checks.AlwaysValid()
+	}
+	pred, _ := checks.OfTypeAndInline(f, t.inline)
+
+	return pred
 }
 
 //nolint:gocognit // refactor later
@@ -57,7 +80,7 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 	}
 
 	// TODO
-	_, err := checks.NewTableDrivenFormat(checks.AlwaysValid())
+	_, err := checks.NewTableDrivenFormat(l.tableDrivenFormat.getTableDrivenFormatPredicate())
 	if err != nil {
 		return nil, fmt.Errorf("error creating table driven format checker: %w", err)
 	}

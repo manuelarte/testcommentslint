@@ -17,7 +17,7 @@ func TestIsTableDrivenTest(t *testing.T) {
 		want      bool
 		wantBlock func(*ast.FuncDecl) *ast.BlockStmt
 	}{
-		"map table driven test": {
+		"map non-inline table driven test": {
 			content: `
 package main
 
@@ -45,6 +45,35 @@ func TestExample(t *testing.T) {
 			wantBlock: func(funcDecl *ast.FuncDecl) *ast.BlockStmt {
 				//nolint:lll
 				return funcDecl.Body.List[1].(*ast.RangeStmt).Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr).Args[1].(*ast.FuncLit).Body
+			},
+		},
+		"map inline table driven test": {
+			content: `
+package main
+
+func TestExample(t *testing.T) {
+	for name, test := range map[string]struct {
+		in int
+		out int
+	} {
+		"test1": {
+			in: 1,
+			out: 1,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := abs(test.in)
+			if got != test.out {
+				t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
+			}
+		})
+	}
+}
+			`[1:],
+			want: true,
+			wantBlock: func(funcDecl *ast.FuncDecl) *ast.BlockStmt {
+				//nolint:lll
+				return funcDecl.Body.List[0].(*ast.RangeStmt).Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr).Args[1].(*ast.FuncLit).Body
 			},
 		},
 		"slice table driven test": {
@@ -108,7 +137,7 @@ func TestExample(t *testing.T) {
 				if funcDecl, ok := n.(*ast.FuncDecl); ok {
 					got, gotBlock := isTableDrivenTest(funcDecl)
 					if got != tc.want {
-						t.Errorf("IsTableDrivenTest() got %v, want %v", got, tc.want)
+						t.Fatalf("IsTableDrivenTest() = %v, want %v", got, tc.want)
 					}
 
 					if tc.wantBlock != nil && !cmp.Equal(gotBlock, tc.wantBlock(funcDecl)) {

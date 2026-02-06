@@ -25,6 +25,13 @@ func TestAnalyzer(t *testing.T) {
 				EqualityComparisonCheckName: "false",
 			},
 		},
+		"table-driven test format map-inline": {
+			patterns: "table-driven-testing-format/map-inline",
+			options: map[string]string{
+				TableDrivenFormatCheckTypeName: "map",
+				TableDrivenFormatCheckInlineName: "true",
+			},
+		},
 	}
 
 	for name, test := range testCases {
