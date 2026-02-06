@@ -127,6 +127,7 @@ func isTableDrivenTest(funcDecl *ast.FuncDecl) (bool, *ast.BlockStmt) {
 			if ident, isIdent := selectorExpr.X.(*ast.Ident); !isIdent || ident.Name != "t" || selectorExpr.Sel.Name != "Run" {
 				continue
 			}
+
 			funcLit, isFuncLit := callExpr.Args[1].(*ast.FuncLit)
 			if !isFuncLit {
 				continue
@@ -150,9 +151,10 @@ func isTableDrivenTest(funcDecl *ast.FuncDecl) (bool, *ast.BlockStmt) {
 				if _, isSlice := identifiers[n.Name].Type.(*ast.SliceExpr); isSlice {
 					formatType = "slice"
 				}
-				toReturn := tableDrivenStruct {
+
+				toReturn := tableDrivenStruct{
 					formatType: formatType,
-					param: n,
+					param:      n,
 				}
 				fmt.Printf("%v", toReturn)
 
@@ -162,11 +164,13 @@ func isTableDrivenTest(funcDecl *ast.FuncDecl) (bool, *ast.BlockStmt) {
 				if !isMapOrSlice(n) {
 					continue
 				}
+
 				formatType := "map"
 				if _, isSlice := n.Type.(*ast.SliceExpr); isSlice {
 					formatType = "slice"
 				}
-				toReturn := tableDrivenStruct {
+
+				toReturn := tableDrivenStruct{
 					formatType: formatType,
 				}
 				fmt.Printf("%+v\n", toReturn)

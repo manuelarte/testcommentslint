@@ -76,7 +76,7 @@ func TestExample(t *testing.T) {
 				return funcDecl.Body.List[0].(*ast.RangeStmt).Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr).Args[1].(*ast.FuncLit).Body
 			},
 		},
-		"slice table driven test": {
+		"slice non-inlined table driven test": {
 			content: `
 package main
 
@@ -106,6 +106,37 @@ func TestExample(t *testing.T) {
 			wantBlock: func(funcDecl *ast.FuncDecl) *ast.BlockStmt {
 				//nolint:lll
 				return funcDecl.Body.List[1].(*ast.RangeStmt).Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr).Args[1].(*ast.FuncLit).Body
+			},
+		},
+		"slice inlined table driven test": {
+			content: `
+package main
+
+func TestExample(t *testing.T) {
+  for _, test := range []struct {
+		name string
+		in int
+		out int
+	} {
+    	{
+			name: "test1",
+			in: 1,
+			out: 1,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got := abs(test.in)
+			if got != test.out {
+				t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
+			}
+		})
+	}
+}
+			`[1:],
+			want: true,
+			wantBlock: func(funcDecl *ast.FuncDecl) *ast.BlockStmt {
+				//nolint:lll
+				return funcDecl.Body.List[0].(*ast.RangeStmt).Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr).Args[1].(*ast.FuncLit).Body
 			},
 		},
 		"no table driven test": {

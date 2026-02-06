@@ -23,6 +23,9 @@ testcommentslint [-equality-comparison=true|false] ./...
 Parameters:
 
 - `equality-comparison`: `true|false` (default `true`) Checks `reflect.DeepEqual` can be replaced by newer `cmp.Equal`.
+- `failure-message`: `true|false` (default `true`) Check that the failure messages in `t.Errorf` follow the format expected.
+- `table-driven-format.type`: `map|slice` (default ``) Check that the table-driven tests are either Map or Slice, empty to leave it as it is.
+- `table-driven-format.inline`: `true|false` (default `false`) Check that the table-driven tests are inlined in the `for` loop.
 
 ## 🚀 Features
 
@@ -61,6 +64,100 @@ check if there are many if with t.Errorf that used the same variable, and the re
 
 Test outputs should output the actual value that the function returned before printing the value that was expected.
 A usual format for printing test outputs is `YourFunc(%v) = %v, want %v`.
+
+### Table-Driven Test Format
+
+Checks whether the table-driven test follow the specified format.
+
+#### Map non-inlined
+
+```go
+tests := map[string]struct {
+    in int
+    out int
+} {
+    "test1": {
+        in: 1,
+        out: 1,
+    },
+}
+for name, test := range tests {
+ t.Run(name, func(t *testing.T) {
+  got := abs(test.in)
+  if got != test.out {
+   t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
+  }
+ })
+}
+```
+
+#### Map inlined
+
+```go
+for name, test := range map[string]struct {
+ in int
+ out int
+} {
+    "test1": {
+     in: 1,
+  out: 1,
+ },
+} {
+ t.Run(name, func(t *testing.T) {
+  got := abs(test.in)
+  if got != test.out {
+   t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
+  }
+ })
+}
+```
+
+#### Slice non-inlined
+
+```go
+tests := []struct {
+ name string
+    in int
+    out int
+} {
+    {
+  name: "test1",
+  in: 1,
+        out: 1,
+    },
+}
+for _, test := range tests {
+ t.Run(test.name, func(t *testing.T) {
+  got := abs(test.in)
+  if got != test.out {
+   t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
+  }
+ })
+}
+```
+
+#### Slice inlined
+
+```go
+for _, test := range []struct {
+ name string
+ in int
+ out int
+} {
+    {
+     name: "test1",
+     in: 1,
+  out: 1,
+ },
+} {
+ t.Run(test.name, func(t *testing.T) {
+  got := abs(test.in)
+  if got != test.out {
+   t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
+  }
+ })
+}
+```
 
 ### [Identify the Input](https://go.dev/wiki/TestComments#identify-the-input)
 

@@ -61,6 +61,7 @@ func (t tableDrivenFormat) getTableDrivenFormatPredicate() checks.TableDrivenFor
 	if f != checks.Map && f != checks.Slice {
 		return checks.AlwaysValid()
 	}
+
 	pred, _ := checks.OfTypeAndInline(f, t.inline)
 
 	return pred
