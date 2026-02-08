@@ -21,7 +21,7 @@ type (
 		funcDecl *ast.FuncDecl
 
 		// tableDrivenInfo information about table-driven test, nil if not a table-driven test.
-		tableDrivenInfo *tableDrivenInfo
+		tableDrivenInfo *TableDrivenInfo
 	}
 
 	// ImportGroup contains the imports that are important for the test.
@@ -32,14 +32,16 @@ type (
 		Reflect *ast.ImportSpec
 	}
 
-	// tableDrivenInfo contains information about table-driven test.
-	tableDrivenInfo struct {
-		// formatType is either "map" or "slice".
-		formatType string
-		// inline is true if the table is declared in the range statement.
-		inline bool
-		// block is the body of the t.Run function.
-		block *ast.BlockStmt
+	// TableDrivenInfo contains information about table-driven test.
+	TableDrivenInfo struct {
+		// Range that iterates over the tests and call t.Run
+		Range *ast.RangeStmt
+		// FormatType is either "map" or "slice".
+		FormatType string
+		// Inlined is true if the table is declared in the range statement.
+		Inlined bool
+		// Block is the body of the t.Run function.
+		Block *ast.BlockStmt
 	}
 )
 
@@ -68,7 +70,7 @@ func (t TestFunction) ImportGroup() ImportGroup {
 // the content inside the t.Run function.
 func (t TestFunction) GetActualTestBlockStmt() *ast.BlockStmt {
 	if t.tableDrivenInfo != nil {
-		return t.tableDrivenInfo.block
+		return t.tableDrivenInfo.Block
 	}
 
 	return t.funcDecl.Body
@@ -77,6 +79,10 @@ func (t TestFunction) GetActualTestBlockStmt() *ast.BlockStmt {
 // GetTestVar returns the name of the testing.T parameter.
 func (t TestFunction) GetTestVar() string {
 	return t.testVar
+}
+
+func (t TestFunction) GetTableDrivenInfo() *TableDrivenInfo {
+	return t.tableDrivenInfo
 }
 
 func (i ImportGroup) ReflectImportName() (string, bool) {
@@ -98,13 +104,15 @@ func (i ImportGroup) GoCmpImportName() (string, bool) {
 // newTableDrivenInfo returns information about a table driven test or nil if it's not a table-driven test.
 //
 //nolint:gocognit,funlen // refactor later
-func newTableDrivenInfo(testVar string, funcDecl *ast.FuncDecl) *tableDrivenInfo {
+func newTableDrivenInfo(testVar string, funcDecl *ast.FuncDecl) *TableDrivenInfo {
 	var stmts []ast.Stmt
 	if funcDecl.Body != nil {
 		stmts = funcDecl.Body.List
 	}
 
 	identifiers := make(map[string]*ast.CompositeLit)
+
+	var rangeStmt *ast.RangeStmt
 
 	for _, stmt := range stmts {
 		switch node := stmt.(type) {
@@ -124,7 +132,7 @@ func newTableDrivenInfo(testVar string, funcDecl *ast.FuncDecl) *tableDrivenInfo
 			}
 
 			if ident, ok := node.Lhs[0].(*ast.Ident); ok {
-				identifiers[ident.Name] = node.Rhs[0].(*ast.CompositeLit)
+				identifiers[ident.Name] = mapOrSliceCompositeLit
 			}
 		// possible for loops that can be used in a table-driven test
 		case *ast.RangeStmt:
@@ -158,6 +166,7 @@ func newTableDrivenInfo(testVar string, funcDecl *ast.FuncDecl) *tableDrivenInfo
 				continue
 			}
 			// from here, it's a table-driven test, we need to check whether is map/slice or inlined
+			rangeStmt = node
 
 			switch n := node.X.(type) {
 			case *ast.Ident:
@@ -177,10 +186,11 @@ func newTableDrivenInfo(testVar string, funcDecl *ast.FuncDecl) *tableDrivenInfo
 					formatType = "slice"
 				}
 
-				return &tableDrivenInfo{
-					formatType: formatType,
-					inline:     false,
-					block:      funcLit.Body,
+				return &TableDrivenInfo{
+					Range:      rangeStmt,
+					FormatType: formatType,
+					Inlined:    false,
+					Block:      funcLit.Body,
 				}
 			case *ast.CompositeLit:
 				// is inlined
@@ -193,10 +203,11 @@ func newTableDrivenInfo(testVar string, funcDecl *ast.FuncDecl) *tableDrivenInfo
 					formatType = "slice"
 				}
 
-				return &tableDrivenInfo{
-					formatType: formatType,
-					inline:     true,
-					block:      funcLit.Body,
+				return &TableDrivenInfo{
+					Range:      rangeStmt,
+					FormatType: formatType,
+					Inlined:    true,
+					Block:      funcLit.Body,
 				}
 			default:
 				continue

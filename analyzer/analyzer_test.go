@@ -26,7 +26,7 @@ func TestAnalyzer(t *testing.T) {
 			},
 		},
 		"table-driven test format map-inline": {
-			patterns: "table-driven-testing-format/map-inline",
+			patterns: "table-driven-testing-format/map-inlined",
 			options: map[string]string{
 				TableDrivenFormatCheckTypeName:   "map",
 				TableDrivenFormatCheckInlineName: "true",

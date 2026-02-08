@@ -81,7 +81,7 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 	}
 
 	// TODO
-	_, err := checks.NewTableDrivenFormat(l.tableDrivenFormat.getTableDrivenFormatPredicate())
+	tbfCheck, err := checks.NewTableDrivenFormat(l.tableDrivenFormat.getTableDrivenFormatPredicate())
 	if err != nil {
 		return nil, fmt.Errorf("error creating table driven format checker: %w", err)
 	}
@@ -110,6 +110,8 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 			if !ok {
 				return
 			}
+
+			tbfCheck.Check(pass, testFunc)
 
 			if l.equalityComparison {
 				checks.NewEqualityComparison().Check(pass, testFunc)

@@ -150,7 +150,7 @@ func TestExample(t *testing.T) {
 				if funcDecl, ok := n.(*ast.FuncDecl); ok {
 					got := newTableDrivenInfo("t", funcDecl)
 
-					gotBlock := got.block
+					gotBlock := got.Block
 					if tc.wantBlock != nil && !cmp.Equal(gotBlock, tc.wantBlock(funcDecl)) {
 						t.Errorf("IsTableDrivenTest() mismatch (-want +got):\n%s", cmp.Diff(tc.wantBlock(funcDecl), gotBlock))
 					}
