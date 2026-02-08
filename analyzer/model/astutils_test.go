@@ -9,12 +9,11 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestIsTableDrivenTest(t *testing.T) {
+func TestNewTableDrivenTestInfoIsTableDrivenTest(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
 		content   string
-		want      bool
 		wantBlock func(*ast.FuncDecl) *ast.BlockStmt
 	}{
 		"map non-inline table driven test": {
@@ -41,7 +40,6 @@ func TestExample(t *testing.T) {
 	}
 }
 			`[1:],
-			want: true,
 			wantBlock: func(funcDecl *ast.FuncDecl) *ast.BlockStmt {
 				//nolint:lll
 				return funcDecl.Body.List[1].(*ast.RangeStmt).Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr).Args[1].(*ast.FuncLit).Body
@@ -70,7 +68,6 @@ func TestExample(t *testing.T) {
 	}
 }
 			`[1:],
-			want: true,
 			wantBlock: func(funcDecl *ast.FuncDecl) *ast.BlockStmt {
 				//nolint:lll
 				return funcDecl.Body.List[0].(*ast.RangeStmt).Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr).Args[1].(*ast.FuncLit).Body
@@ -102,7 +99,6 @@ func TestExample(t *testing.T) {
 	}
 }
 			`[1:],
-			want: true,
 			wantBlock: func(funcDecl *ast.FuncDecl) *ast.BlockStmt {
 				//nolint:lll
 				return funcDecl.Body.List[1].(*ast.RangeStmt).Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr).Args[1].(*ast.FuncLit).Body
@@ -133,24 +129,10 @@ func TestExample(t *testing.T) {
 	}
 }
 			`[1:],
-			want: true,
 			wantBlock: func(funcDecl *ast.FuncDecl) *ast.BlockStmt {
 				//nolint:lll
 				return funcDecl.Body.List[0].(*ast.RangeStmt).Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr).Args[1].(*ast.FuncLit).Body
 			},
-		},
-		"no table driven test": {
-			content: `
-package main
-
-func TestExample(t *testing.T) {
-  got := parse("1")
-  if got != tc.want {
-    t.Errorf("parse got %v, want %v", got, tc.want)
-  }
-}
-			`[1:],
-			want: false,
 		},
 	}
 	for name, tc := range tests {
@@ -166,13 +148,55 @@ func TestExample(t *testing.T) {
 
 			ast.Inspect(node, func(n ast.Node) bool {
 				if funcDecl, ok := n.(*ast.FuncDecl); ok {
-					got, gotBlock := isTableDrivenTest(funcDecl)
-					if got != tc.want {
-						t.Fatalf("IsTableDrivenTest() = %v, want %v", got, tc.want)
-					}
+					got := newTableDrivenInfo("t", funcDecl)
 
+					gotBlock := got.block
 					if tc.wantBlock != nil && !cmp.Equal(gotBlock, tc.wantBlock(funcDecl)) {
 						t.Errorf("IsTableDrivenTest() mismatch (-want +got):\n%s", cmp.Diff(tc.wantBlock(funcDecl), gotBlock))
+					}
+				}
+
+				return true
+			})
+		})
+	}
+}
+
+func TestNewTableDrivenTestInfoNoTableDrivenTest(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		content string
+	}{
+		"no table driven test": {
+			content: `
+package main
+
+func TestExample(t *testing.T) {
+  got := parse("1")
+  if got != tc.want {
+    t.Errorf("parse got %v, want %v", got, tc.want)
+  }
+}
+			`[1:],
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			fset := token.NewFileSet()
+
+			node, err := parser.ParseFile(fset, "test.go", tc.content, parser.ParseComments)
+			if err != nil {
+				t.Fatalf("error parsing file: %v", err)
+			}
+
+			ast.Inspect(node, func(n ast.Node) bool {
+				if funcDecl, ok := n.(*ast.FuncDecl); ok {
+					got := newTableDrivenInfo("t", funcDecl)
+					if got != nil {
+						t.Errorf("newTableDrivenInfo() = %v, want nil", got)
 					}
 				}
 
