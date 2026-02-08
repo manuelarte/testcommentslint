@@ -182,7 +182,7 @@ func newTableDrivenInfo(testVar string, funcDecl *ast.FuncDecl) *TableDrivenInfo
 
 				// is non-inlined and the param contains whether is map/slice
 				formatType := "map"
-				if _, isSlice := identifiers[n.Name].Type.(*ast.SliceExpr); isSlice {
+				if _, isSlice := identifiers[n.Name].Type.(*ast.ArrayType); isSlice {
 					formatType = "slice"
 				}
 
@@ -199,7 +199,7 @@ func newTableDrivenInfo(testVar string, funcDecl *ast.FuncDecl) *TableDrivenInfo
 				}
 
 				formatType := "map"
-				if _, isSlice := n.Type.(*ast.SliceExpr); isSlice {
+				if _, isSlice := n.Type.(*ast.ArrayType); isSlice {
 					formatType = "slice"
 				}
 
