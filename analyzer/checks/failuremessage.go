@@ -159,24 +159,6 @@ func (t testFuncBlock) getFunctionName() string {
 	return t.testedFunc.functionName
 }
 
-//nolint:unused // to be used later
-func (t testFuncBlock) getGotName() string {
-	for _, param := range t.testedFunc.params {
-		if param.Name == "_" {
-			continue
-		}
-
-		for _, ifParam := range t.ifStmt.params {
-			if param.Name == ifParam.Name {
-				return param.Name
-			}
-		}
-	}
-
-	// impossible case
-	return "got"
-}
-
 // isRecommendedFailureMessage expects the name of the function followed by the output and want.
 func (t testFuncBlock) isRecommendedFailureMessage() bool {
 	currentFailureMessage := t.ifStmt.errorCallExpr.failureMessage
@@ -492,8 +474,10 @@ func newTErrorfCallExpr(testVar string, stmt ast.Stmt) (tErrorfCallExpr, bool) {
 	params := make([]*ast.Ident, 0)
 
 	for i := 1; len(callExpr.Args) > i; i++ {
+		// TODO here we need to accept also selectorExpr that comes from the table driven tests
 		paramIdent, isParamIdent := callExpr.Args[i].(*ast.Ident)
-		if !isParamIdent {
+		_, isTestSelectorExpr := callExpr.Args[i].(*ast.SelectorExpr)
+		if !isParamIdent && !isTestSelectorExpr {
 			return tErrorfCallExpr{}, false
 		}
 
