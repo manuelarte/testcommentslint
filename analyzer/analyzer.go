@@ -15,10 +15,10 @@ import (
 )
 
 const (
-	EqualityComparisonCheckName      = "equality-comparison"
-	FailureMessageCheckName          = "failure-message"
-	TableDrivenFormatCheckTypeName   = "table-driven-format.type"
-	TableDrivenFormatCheckInlineName = "table-driven-format.inline"
+	EqualityComparisonCheckName       = "equality-comparison"
+	FailureMessageCheckName           = "failure-message"
+	TableDrivenFormatCheckTypeName    = "table-driven-format.type"
+	TableDrivenFormatCheckInlinedName = "table-driven-format.inlined"
 )
 
 func New() *analysis.Analyzer {
@@ -38,7 +38,7 @@ func New() *analysis.Analyzer {
 		"Check that the failure messages in t.Errorf follow the format expected.")
 	a.Flags.StringVar(&l.tableDrivenFormat.formatType, TableDrivenFormatCheckTypeName, "",
 		"Check that the table-driven tests are either Map or Slice.")
-	a.Flags.BoolVar(&l.tableDrivenFormat.inline, TableDrivenFormatCheckInlineName, false,
+	a.Flags.BoolVar(&l.tableDrivenFormat.inlined, TableDrivenFormatCheckInlinedName, false,
 		"Check that the table-driven tests are either inline or declared before.")
 
 	return a
@@ -52,7 +52,7 @@ type (
 	}
 	tableDrivenFormat struct {
 		formatType string
-		inline     bool
+		inlined    bool
 	}
 )
 
@@ -62,7 +62,7 @@ func (t tableDrivenFormat) getTableDrivenFormatPredicate() checks.TableDrivenFor
 		return checks.AlwaysValid()
 	}
 
-	pred, _ := checks.OfTypeAndInline(f, t.inline)
+	pred, _ := checks.OfTypeAndInline(f, t.inlined)
 
 	return pred
 }

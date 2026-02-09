@@ -17,7 +17,7 @@ go install github.com/manuelarte/testcommentslint@latest
 And then use it with
 
 ```bash
-testcommentslint [-equality-comparison=true|false] ./...
+testcommentslint [-equality-comparison=true|false] [-failure-message=true|false] [-table-driven-format.type=map|slice] [-table-driven-format.inlined=true|false] ./...
 ```
 
 Parameters:
@@ -25,7 +25,7 @@ Parameters:
 - `equality-comparison`: `true|false` (default `true`) Checks `reflect.DeepEqual` can be replaced by newer `cmp.Equal`.
 - `failure-message`: `true|false` (default `true`) Check that the failure messages in `t.Errorf` follow the format expected.
 - `table-driven-format.type`: `map|slice` (default ``) Check that the table-driven tests are either Map or Slice, empty to leave it as it is.
-- `table-driven-format.inline`: `true|false` (default `false`) Check that the table-driven tests are inlined in the `for` loop.
+- `table-driven-format.inlined`: `true|false` (default `false`) Check that the table-driven tests are inlined in the `for` loop.
 
 ## 🚀 Features
 

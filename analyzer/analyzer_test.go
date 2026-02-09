@@ -28,15 +28,15 @@ func TestAnalyzer(t *testing.T) {
 		"table-driven test format map-inlined": {
 			patterns: "table-driven-testing-format/map-inlined",
 			options: map[string]string{
-				TableDrivenFormatCheckTypeName:   "map",
-				TableDrivenFormatCheckInlineName: "true",
+				TableDrivenFormatCheckTypeName:    "map",
+				TableDrivenFormatCheckInlinedName: "true",
 			},
 		},
 		"table-driven test format map-non-inlined": {
 			patterns: "table-driven-testing-format/map-non-inlined",
 			options: map[string]string{
-				TableDrivenFormatCheckTypeName:   "map",
-				TableDrivenFormatCheckInlineName: "false",
+				TableDrivenFormatCheckTypeName:    "map",
+				TableDrivenFormatCheckInlinedName: "false",
 			},
 		},
 	}
