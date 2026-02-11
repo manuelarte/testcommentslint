@@ -94,17 +94,9 @@ type (
 		importGroup model.ImportGroup
 
 		// testedFunc contain the actual call to the function tested.
-		testedFunc testFuncStmt
+		testedFunc model.TestedCallExpr
 		// contain the got != want condition and the t.Errorf call.
 		ifStmt gotWantIfStmt
-	}
-
-	// testFuncStmt contains the actual call to the function tested.
-	testFuncStmt struct {
-		callExpr *ast.CallExpr
-
-		functionName string
-		params       []*ast.Ident
 	}
 
 	// gotWantIfStatement struct holding an if statement that contains a comparison of got and want.
@@ -138,13 +130,18 @@ func newTestFuncBlock(
 	prev ast.Stmt,
 	ifStmt *ast.IfStmt,
 ) (testFuncBlock, bool) {
-	gwStmt, isGotWant := newGotWantIfStmt(importGroup, testVar, ifStmt)
-	if !isGotWant {
+	testedFunc, isTestedFunc := model.NewTestedCallExpr(prev)
+	if !isTestedFunc {
 		return testFuncBlock{}, false
 	}
 
-	testedFunc, isTestedFunc := newTestedFuncExpr(prev)
-	if !isTestedFunc {
+	// TODO new approach
+	newIfStmt, isComparingIfStmt := model.NewIfComparingResult(importGroup, testedFunc.Params(), ifStmt)
+	fmt.Printf("%t: %+v", isComparingIfStmt, newIfStmt)
+	//
+
+	gwStmt, isGotWant := newGotWantIfStmt(importGroup, testVar, ifStmt)
+	if !isGotWant {
 		return testFuncBlock{}, false
 	}
 
@@ -153,10 +150,6 @@ func newTestFuncBlock(
 		testedFunc:  testedFunc,
 		ifStmt:      gwStmt,
 	}, true
-}
-
-func (t testFuncBlock) getFunctionName() string {
-	return t.testedFunc.functionName
 }
 
 // isRecommendedFailureMessage expects the name of the function followed by the output and want.
@@ -170,7 +163,7 @@ func (t testFuncBlock) isRecommendedFailureMessage() bool {
 
 	switch t.ifStmt.ifType {
 	case equal:
-		funName := t.getFunctionName()
+		funName := t.testedFunc.FunctionName()
 		quotedFunName := regexp.QuoteMeta(funName)
 		pattern := fmt.Sprintf(`^%s(?:|\(.*\)) = %%[^,]+, want %%[^,]+$`, quotedFunName)
 
@@ -188,66 +181,28 @@ func (t testFuncBlock) isRecommendedFailureMessage() bool {
 }
 
 func (t testFuncBlock) expectedFailureMessage() string {
-	in := make([]string, len(t.testedFunc.callExpr.Args))
+	in := make([]string, len(t.testedFunc.CallExpr().Args))
 	for i := range in {
 		in[i] = "%v"
 	}
 
-	out := make([]string, len(t.testedFunc.params))
+	out := make([]string, len(t.testedFunc.Params()))
 	for i := range out {
-		if t.testedFunc.params[i].Name == "_" {
+		if t.testedFunc.Params()[i].Name == "_" {
 			out[i] = "_"
 		} else {
 			out[i] = "%v"
 		}
 	}
 
-	funcFailurePart := fmt.Sprintf("%s(%s) = %s", t.getFunctionName(), strings.Join(in, ", "), strings.Join(out, ", "))
+	//nolint:lll // refactor later
+	funcFailurePart := fmt.Sprintf("%s(%s) = %s", t.testedFunc.FunctionName(), strings.Join(in, ", "), strings.Join(out, ", "))
 
 	if t.ifStmt.ifType == diff {
 		return "Prefer \"diff -want +got:\\n%s\" format for this failure message"
 	}
 
 	return fmt.Sprintf("Prefer \"%s, want %%v\" format for this failure message", funcFailurePart)
-}
-
-// newTestedFuncExpr creates a testedFuncStmt after checking that the stmt is a typical function call.
-func newTestedFuncExpr(stmt ast.Stmt) (testFuncStmt, bool) {
-	var callExpr *ast.CallExpr
-
-	params := make([]*ast.Ident, 0)
-
-	assignStmt, isAssignStmt := stmt.(*ast.AssignStmt)
-	if !isAssignStmt {
-		return testFuncStmt{}, false
-	}
-
-	if len(assignStmt.Rhs) != 1 {
-		return testFuncStmt{}, false
-	}
-
-	for _, expr := range assignStmt.Lhs {
-		ident, ok := expr.(*ast.Ident)
-		if !ok {
-			return testFuncStmt{}, false
-		}
-
-		params = append(params, ident)
-	}
-
-	ce, ok := assignStmt.Rhs[0].(*ast.CallExpr)
-	if !ok {
-		return testFuncStmt{}, false
-	}
-
-	callExpr = ce
-
-	return testFuncStmt{
-		callExpr: callExpr,
-
-		functionName: getFunctionName(callExpr.Fun),
-		params:       params,
-	}, true
 }
 
 // newGotWantIfStmt creates a new gotWantIfStmt.
@@ -476,6 +431,7 @@ func newTErrorfCallExpr(testVar string, stmt ast.Stmt) (tErrorfCallExpr, bool) {
 	for i := 1; len(callExpr.Args) > i; i++ {
 		// TODO here we need to accept also selectorExpr that comes from the table driven tests
 		paramIdent, isParamIdent := callExpr.Args[i].(*ast.Ident)
+
 		_, isTestSelectorExpr := callExpr.Args[i].(*ast.SelectorExpr)
 		if !isParamIdent && !isTestSelectorExpr {
 			return tErrorfCallExpr{}, false
@@ -502,19 +458,6 @@ func isNotBlankIdent(expr ast.Expr) (*ast.Ident, bool) {
 	}
 
 	return ident, true
-}
-
-func getFunctionName(expr ast.Expr) string {
-	switch fn := expr.(type) {
-	case *ast.Ident:
-		return fn.Name
-	case *ast.SelectorExpr:
-		if ident, ok := fn.X.(*ast.Ident); ok {
-			return ident.Name + "." + fn.Sel.Name
-		}
-	}
-
-	return ""
 }
 
 func isReflectEqual(reflectImportAlias string, se *ast.SelectorExpr) bool {

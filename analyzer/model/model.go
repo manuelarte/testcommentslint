@@ -43,8 +43,22 @@ type (
 		// Block is the body of the t.Run function.
 		Block *ast.BlockStmt
 	}
+
+	// TestedCallExpr contains the actual call to the function tested.
+	// got := MyFunction(in) <- TestedCallExpr
+	// if got != want {
+	//   t.Errorf(...)
+	// }.
+	TestedCallExpr struct {
+		// callExpr contains the actual call to the function tested.
+		callExpr *ast.CallExpr
+
+		// params contains all the left hand side params of the assignment
+		params []*ast.Ident
+	}
 )
 
+// NewTestFunction returns a new TestFunction based on the funcDecl.
 func NewTestFunction(importGroup ImportGroup, funcDecl *ast.FuncDecl) (TestFunction, bool) {
 	ok, testVar := isTestFunction(funcDecl)
 	if !ok {
@@ -216,4 +230,66 @@ func newTableDrivenInfo(testVar string, funcDecl *ast.FuncDecl) *TableDrivenInfo
 	}
 
 	return nil
+}
+
+// NewTestedCallExpr creates a testedFuncStmt after checking that the stmt is a typical function call.
+// 1. Statement is an *ast.AssignStmt.
+// 2. Right hand side is a *ast.CallExpr
+// 3. Left hand side is a list of *ast.Ident, containing the got parameter.
+func NewTestedCallExpr(stmt ast.Stmt) (TestedCallExpr, bool) {
+	var callExpr *ast.CallExpr
+
+	params := make([]*ast.Ident, 0)
+
+	assignStmt, isAssignStmt := stmt.(*ast.AssignStmt)
+	if !isAssignStmt {
+		return TestedCallExpr{}, false
+	}
+
+	if len(assignStmt.Rhs) != 1 {
+		return TestedCallExpr{}, false
+	}
+
+	for _, expr := range assignStmt.Lhs {
+		ident, ok := expr.(*ast.Ident)
+		if !ok {
+			return TestedCallExpr{}, false
+		}
+
+		params = append(params, ident)
+	}
+
+	ce, ok := assignStmt.Rhs[0].(*ast.CallExpr)
+	if !ok {
+		return TestedCallExpr{}, false
+	}
+
+	callExpr = ce
+
+	return TestedCallExpr{
+		callExpr: callExpr,
+
+		params: params,
+	}, true
+}
+
+func (t TestedCallExpr) CallExpr() *ast.CallExpr {
+	return t.callExpr
+}
+
+func (t TestedCallExpr) Params() []*ast.Ident {
+	return t.params
+}
+
+func (t TestedCallExpr) FunctionName() string {
+	switch fn := t.callExpr.Fun.(type) {
+	case *ast.Ident:
+		return fn.Name
+	case *ast.SelectorExpr:
+		if ident, ok := fn.X.(*ast.Ident); ok {
+			return ident.Name + "." + fn.Sel.Name
+		}
+	}
+
+	return ""
 }

@@ -77,3 +77,58 @@ func isMapOrSliceCompositeLit(expr ast.Expr) *ast.CompositeLit {
 
 	return nil
 }
+
+func isNotBlankIdent(expr ast.Expr) (*ast.Ident, bool) {
+	ident, ok := expr.(*ast.Ident)
+	if !ok {
+		return nil, false
+	}
+
+	if ident.Name == "_" {
+		return nil, false
+	}
+
+	return ident, true
+}
+
+func isGoCmpDiff(goCmpImportAlias string, se *ast.SelectorExpr) bool {
+	if se == nil {
+		return false
+	}
+
+	if ident, ok := se.X.(*ast.Ident); ok {
+		if ident.Name == goCmpImportAlias && se.Sel.Name == "Diff" {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isGoCmpEqual(goCmpImportAlias string, se *ast.SelectorExpr) bool {
+	if se == nil {
+		return false
+	}
+
+	if ident, ok := se.X.(*ast.Ident); ok {
+		if ident.Name == goCmpImportAlias && se.Sel.Name == "Equal" {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isReflectEqual(reflectImportAlias string, se *ast.SelectorExpr) bool {
+	if se == nil {
+		return false
+	}
+
+	if ident, ok := se.X.(*ast.Ident); ok {
+		if ident.Name == reflectImportAlias && se.Sel.Name == "DeepEqual" {
+			return true
+		}
+	}
+
+	return false
+}
