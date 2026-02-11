@@ -63,6 +63,7 @@ func (c FailureMessage) Check(pass *analysis.Pass, testFunc model.TestFunction) 
 			if testBlock.isRecommendedFailureMessage() {
 				continue
 			}
+
 			diag := analysis.Diagnostic{
 				Pos:      testBlock.tErrorCallExpr.CallExpr().Pos(),
 				End:      testBlock.tErrorCallExpr.CallExpr().End(),
@@ -79,7 +80,7 @@ func (c FailureMessage) Check(pass *analysis.Pass, testFunc model.TestFunction) 
 type (
 	// testFuncBlock is a struct that holds the typical testing block like:
 	// got := myFunction(in)	<- testedFunc
-	// if got != want { 		<- ifComparingResult
+	// if got != want { 		<- ifComparing
 	//   t.Errorf(...)			<- tErrorfCallExpr
 	// }.
 	testFuncBlock struct {

@@ -11,7 +11,7 @@ var (
 )
 
 type (
-	// IfComparingResult interface that contains the if statement that leads to t.Errorf or t.Fatalf.
+	// IfComparing interface that contains the if statement that leads to t.Errorf or t.Fatalf.
 	IfComparing interface {
 		IfStmt() *ast.IfStmt
 	}
@@ -113,13 +113,6 @@ func isDiffParamIfStmt(importGroup ImportGroup, ifStmt *ast.IfStmt) bool {
 		}
 
 		if len(callExpr.Args) != 2 {
-			return false
-		}
-
-		_, isXIdent := isNotBlankIdent(callExpr.Args[0])
-
-		_, isYIdent := isNotBlankIdent(callExpr.Args[1])
-		if !isXIdent || !isYIdent {
 			return false
 		}
 

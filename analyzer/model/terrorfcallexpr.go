@@ -14,9 +14,11 @@ func NewTErrorfCallExpr(testVar string, blStmts *ast.BlockStmt) (TErrorfCallExpr
 	if blStmts == nil {
 		return TErrorfCallExpr{}, false
 	}
+
 	if len(blStmts.List) != 1 {
 		return TErrorfCallExpr{}, false
 	}
+
 	stmt := blStmts.List[0]
 
 	exprStmt, isExprStmt := stmt.(*ast.ExprStmt)
