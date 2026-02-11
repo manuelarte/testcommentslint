@@ -5,11 +5,14 @@ import (
 	"go/token"
 )
 
-var _ IfComparingResult = new(ComparingParamsIfStmt)
+var (
+	_ IfComparing = new(ComparingParamsIfStmt)
+	_ IfComparing = new(DiffIfStmt)
+)
 
 type (
 	// IfComparingResult interface that contains the if statement that leads to t.Errorf or t.Fatalf.
-	IfComparingResult interface {
+	IfComparing interface {
 		IfStmt() *ast.IfStmt
 	}
 
@@ -38,7 +41,7 @@ func NewIfComparingResult(
 	importGroup ImportGroup,
 	testedFunctionParams []*ast.Ident,
 	ifStmt *ast.IfStmt,
-) (IfComparingResult, bool) {
+) (IfComparing, bool) {
 	if ifStmt == nil || ifStmt.Body == nil {
 		return nil, false
 	}
@@ -139,7 +142,7 @@ func isDiffParamIfStmt(importGroup ImportGroup, ifStmt *ast.IfStmt) bool {
 	switch node := ifStmt.Cond.(type) {
 	case *ast.BinaryExpr:
 		// check "ident1 != ident2" and both are used in the failure message `t.Errorf`.
-		if node.Op.String() != "!=" {
+		if node.Op != token.NEQ {
 			return false
 		}
 
@@ -171,7 +174,7 @@ func getGotWantParams(
 	switch node := cond.(type) {
 	case *ast.BinaryExpr:
 		// check "ident1 != ident2".
-		if node.Op != token.NOT {
+		if node.Op != token.NEQ {
 			return nil, nil, false
 		}
 
