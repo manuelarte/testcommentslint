@@ -1,16 +1,11 @@
 package checks
 
 import (
-	"fmt"
 	"go/ast"
-	"regexp"
-	"strconv"
-	"strings"
 
 	"golang.org/x/tools/go/analysis"
 
 	"github.com/manuelarte/testcommentslint/analyzer/model"
-	"github.com/manuelarte/testcommentslint/analyzer/slicesutils"
 )
 
 // FailureMessage check that the failure messages in t.Errorf follow the format expected.
@@ -55,123 +50,23 @@ func (c FailureMessage) Check(pass *analysis.Pass, testFunc model.TestFunction) 
 			// - if statement
 			// - the t.Errorf call
 			// - the tested function previous to the if statement
-			testBlock, isTestBlock := newTestFuncBlock(testFunc.ImportGroup(), testVar, stmts[i-1], ifStmt)
+			testBlock, isTestBlock := model.NewTestPartBlock(testFunc.ImportGroup(), testVar, stmts[i-1], ifStmt)
 			if !isTestBlock {
 				continue
 			}
 
-			if testBlock.isRecommendedFailureMessage() {
+			if testBlock.IsRecommendedFailureMessage() {
 				continue
 			}
 
 			diag := analysis.Diagnostic{
-				Pos:      testBlock.tErrorCallExpr.CallExpr().Pos(),
-				End:      testBlock.tErrorCallExpr.CallExpr().End(),
+				Pos:      testBlock.TErrorCallExpr().CallExpr().Pos(),
+				End:      testBlock.TErrorCallExpr().CallExpr().End(),
 				Category: c.category,
-				Message:  testBlock.expectedFailureMessage(),
+				Message:  testBlock.ExpectedFailureMessage(),
 				URL:      "https://github.com/manuelarte/testcommentslint/tree/main?tab=readme-ov-file#failure-message",
 			}
 			pass.Report(diag)
 		}
 	}
-}
-
-// Auxiliary structs to facilitate the business logic.
-type (
-	// testFuncBlock is a struct that holds the typical testing block like:
-	// got := myFunction(in)	<- testedFunc
-	// if got != want { 		<- ifComparing
-	//   t.Errorf(...)			<- tErrorfCallExpr
-	// }.
-	testFuncBlock struct {
-		importGroup model.ImportGroup
-
-		// testedFunc contain the actual call to the function tested.
-		testedFunc model.TestedCallExpr
-
-		// ifComparing contains the if statement that leads to t.Errorf or t.Fatalf.
-		ifComparing model.IfComparing
-
-		// tErrorCallExpr contains the call to t.Errorf or t.Fatalf and its parameters.
-		tErrorCallExpr model.TErrorfCallExpr
-	}
-)
-
-func newTestFuncBlock(
-	importGroup model.ImportGroup,
-	testVar string,
-	prev ast.Stmt,
-	ifStmt *ast.IfStmt,
-) (testFuncBlock, bool) {
-	testedFunc, isTestedFunc := model.NewTestedCallExpr(prev)
-	if !isTestedFunc {
-		return testFuncBlock{}, false
-	}
-
-	ifComparing, isComparingIfStmt := model.NewIfComparingResult(importGroup, testedFunc.Params(), ifStmt)
-	if !isComparingIfStmt {
-		return testFuncBlock{}, false
-	}
-
-	teCallExpr, istErrorf := model.NewTErrorfCallExpr(testVar, ifStmt.Body)
-	if !istErrorf {
-		return testFuncBlock{}, false
-	}
-
-	return testFuncBlock{
-		importGroup:    importGroup,
-		testedFunc:     testedFunc,
-		ifComparing:    ifComparing,
-		tErrorCallExpr: teCallExpr,
-	}, true
-}
-
-// isRecommendedFailureMessage returns whether the failure message honors the expected format for comparison used.
-func (t testFuncBlock) isRecommendedFailureMessage() bool {
-	currentFailureMessage := t.tErrorCallExpr.FailureMessage()
-
-	unquoted, err := strconv.Unquote(currentFailureMessage)
-	if err != nil {
-		unquoted = currentFailureMessage
-	}
-
-	switch t.ifComparing.(type) {
-	case model.ComparingParamsIfStmt:
-		funName := t.testedFunc.FunctionName()
-		quotedFunName := regexp.QuoteMeta(funName)
-		pattern := fmt.Sprintf(`^%s(?:|\(.*\)) = %%[^,]+, want %%[^,]+$`, quotedFunName)
-
-		matched, _ := regexp.MatchString(pattern, unquoted)
-
-		return matched
-	case model.DiffIfStmt:
-		pattern := `(?:-want \+got|\(-want \+got\)):\n%s$`
-		matched, _ := regexp.MatchString(pattern, unquoted)
-
-		return matched
-	}
-
-	return true
-}
-
-func (t testFuncBlock) expectedFailureMessage() string {
-	if _, ok := t.ifComparing.(model.DiffIfStmt); ok {
-		return "Prefer \"diff -want +got:\\n%s\" format for this failure message"
-	}
-
-	in := strings.Join(slicesutils.Map(t.testedFunc.CallExpr().Args, func(in ast.Expr) string {
-		return "%v"
-	}), ", ")
-
-	out := strings.Join(slicesutils.Map(t.testedFunc.Params(), func(in *ast.Ident) string {
-		if in.Name == "_" {
-			return "_"
-		}
-
-		return "%v"
-	}), ", ")
-
-	funcFailurePart := fmt.Sprintf("%s(%s) = %s", t.testedFunc.FunctionName(), in, out)
-
-	return fmt.Sprintf("Prefer \"%s, want %%v\" format for this failure message", funcFailurePart)
 }
