@@ -10,7 +10,7 @@
 
 ### Did you document any new/modified functionality?
 
-- [ ] Updated `examples/`
+- [ ] Updated `testdata/src/`
 - [ ] Updated `README.md`
 
 ### Notes
