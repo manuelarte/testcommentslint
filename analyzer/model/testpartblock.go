@@ -63,10 +63,6 @@ func (t TestPartBlock) TErrorCallExpr() TErrorfCallExpr {
 }
 
 func (t TestPartBlock) ExpectedFailureMessage() string {
-	if _, ok := t.ifComparing.(DiffIfStmt); ok {
-		return "Prefer \"diff -want +got:\\n%s\" format for this failure message"
-	}
-
 	in := strings.Join(slicesutils.Map(t.testedFunc.CallExpr().Args, func(in ast.Expr) string {
 		return "%v"
 	}), ", ")
@@ -81,7 +77,14 @@ func (t TestPartBlock) ExpectedFailureMessage() string {
 
 	funcFailurePart := fmt.Sprintf("%s(%s) = %s", t.testedFunc.FunctionName(), in, out)
 
-	return fmt.Sprintf("Prefer \"%s, want %%v\" format for this failure message", funcFailurePart)
+	switch t.ifComparing.(type) {
+	case ComparingParamsIfStmt:
+		return fmt.Sprintf("Prefer \"%s, want %%v\" format for this failure message", funcFailurePart)
+	case DiffIfStmt:
+		return fmt.Sprintf("Prefer \"%s mismatch (-want +got):\\n%%s\" format for this failure message", funcFailurePart)
+	}
+
+	return ""
 }
 
 // IsRecommendedFailureMessage returns whether the failure message honors the expected format for comparison used.

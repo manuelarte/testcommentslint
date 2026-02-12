@@ -61,7 +61,7 @@ func TestCmpDiffWrongFormat(t *testing.T) {
 	}
 	got := double(1)
 	if diff := cmp.Diff(got, want); diff != "" {
-		t.Errorf("diff %s", diff) // want `Prefer "diff -want \+got:\\n%s" format for this failure message`
+		t.Errorf("diff %s", diff) // want `Prefer "double\(%v\) = %v mismatch \(-want \+got\):\\n%s" format for this failure message`
 	}
 }
 
@@ -87,7 +87,7 @@ func TestTableDrivenCmpDiffWrongFormat(t *testing.T) {
 
 			got := double(1)
 			if diff := cmp.Diff(got, test.want); diff != "" {
-				t.Errorf("diff %s", diff) // want `Prefer "diff -want \+got:\\n%s" format for this failure message`
+				t.Errorf("diff %s", diff) // want `Prefer "double\(%v\) = %v mismatch \(-want \+got\):\\n%s" format for this failure message`
 			}
 		})
 	}
