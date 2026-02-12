@@ -56,6 +56,8 @@ func TestFunctionName(t *testing.T) {
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			got := test.testedCallExpr.FunctionName()
 			if got != test.want {
 				t.Errorf("FunctionName() = %q, want %q", got, test.want)

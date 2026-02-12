@@ -282,14 +282,26 @@ func (t TestedCallExpr) Params() []*ast.Ident {
 }
 
 func (t TestedCallExpr) FunctionName() string {
-	switch fn := t.callExpr.Fun.(type) {
-	case *ast.Ident:
-		return fn.Name
-	case *ast.SelectorExpr:
-		if ident, ok := fn.X.(*ast.Ident); ok {
-			return ident.Name + "." + fn.Sel.Name
-		}
+	fn, err := getFunctionName(t.callExpr.Fun)
+	if err != nil {
+		return ""
 	}
 
-	return ""
+	return fn
+}
+
+func getFunctionName(expr ast.Expr) (string, error) {
+	switch fn := (expr).(type) {
+	case *ast.Ident:
+		return fn.Name, nil
+	case *ast.SelectorExpr:
+		value, err := getFunctionName(fn.X)
+		if err != nil {
+			return "", err
+		}
+
+		return value + "." + fn.Sel.Name, nil
+	}
+
+	return "", nil
 }

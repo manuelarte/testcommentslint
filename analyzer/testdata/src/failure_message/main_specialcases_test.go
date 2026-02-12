@@ -31,7 +31,7 @@ func TestGetDuration(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got := test.period.Duration()
 			if got != test.want {
-				t.Errorf("got %v, want %v", got, test.want) // want `Prefer "Duration\(\) = %v, want %v" format for this failure message`
+				t.Errorf("got %v, want %v", got, test.want) // want `Prefer "test.period.Duration\(\) = %v, want %v" format for this failure message`
 			}
 		})
 	}
