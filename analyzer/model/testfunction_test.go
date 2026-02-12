@@ -60,7 +60,7 @@ func TestFunctionName(t *testing.T) {
 
 			got := test.testedCallExpr.FunctionName()
 			if got != test.want {
-				t.Errorf("FunctionName() = %q, want %q", got, test.want)
+				t.Errorf("test.testedCallExpr.FunctionName() = %q, want %q", got, test.want)
 			}
 		})
 	}
