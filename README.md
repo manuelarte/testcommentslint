@@ -31,7 +31,7 @@ Parameters:
 
 ### [Equality Comparison and Diffs](https://go.dev/wiki/TestComments#equality-comparison-and-diffs)
 
-This linter detects expressions like:
+This linter detects the expression:
 
 ```go
 if !reflect.DeepEqual(got, want) {
@@ -46,7 +46,12 @@ For more use cases and examples, check [equality-comparison](analyzer/testdata/s
 > Suggested Fix can't be supported since it could potentially imply adding go-cmp dependency
 > and `reflect.DeepEqual` can't be directly replaced by `cmp.Equal` or `cmp.Diff`.
 
-### [Got before Want](https://go.dev/wiki/TestComments#got-before-want)
+### Failure Messages
+
+This feature tries to detect
+
+- [Got before Want](https://go.dev/wiki/TestComments#got-before-want).
+- [Identify The Function](https://go.dev/wiki/TestComments#identify-the-function).
 
 Test outputs should output the actual value that the function returned before printing the value that was expected.
 A usual format for printing test outputs is `YourFunc(%v) = %v, want %v`.
@@ -54,12 +59,13 @@ A usual format for printing test outputs is `YourFunc(%v) = %v, want %v`.
 For diffs, directionality is less apparent, and thus it is important to include a key to aid in interpreting the failure.
 See [Print Diffs](https://go.dev/wiki/TestComments#print-diffs).
 
-Whichever order you use in your failure messages, you should explicitly indicate the ordering as a part of the failure message,
-because existing code is inconsistent about the ordering.
+> [!NOTE]
+> Suggested Fix may be supported.
 
 ### Table-Driven Test Format
 
-Checks whether the table-driven test follow the specified format.
+Feature that checks consistency when declaring your table-driven tests.
+The options are:
 
 #### Map non-inlined
 
@@ -75,10 +81,10 @@ tests := map[string]struct {
 }
 for name, test := range tests {
     t.Run(name, func(t *testing.T) {
-		got := abs(test.in)
-		if got != test.out {
-			t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
-		}
+  got := abs(test.in)
+  if got != test.out {
+   t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
+  }
     })
 }
 ```
@@ -87,20 +93,20 @@ for name, test := range tests {
 
 ```go
 for name, test := range map[string]struct {
-	in int
+ in int
     out int
 } {
     "test1": {
-		in: 1, 
-		out: 1,
-	},
+  in: 1,
+  out: 1,
+ },
 } {
-	t.Run(name, func(t *testing.T) {
-		got := abs(test.in)
-		if got != test.out {
-			t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
-		}
-	})
+ t.Run(name, func(t *testing.T) {
+  got := abs(test.in)
+  if got != test.out {
+   t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
+  }
+ })
 }
 ```
 
@@ -108,12 +114,12 @@ for name, test := range map[string]struct {
 
 ```go
 tests := []struct {
-	name string
-	in int
+ name string
+ in int
     out int
 } {
-	{
-		name: "test1",
+ {
+  name: "test1",
         in: 1,
         out: 1,
     },
@@ -132,22 +138,22 @@ for _, test := range tests {
 
 ```go
 for _, test := range []struct {
-	name string
+ name string
     in int
     out int
 } {
-	{
-		name: "test1", 
-		in: 1, 
-		out: 1,
-	},
+ {
+  name: "test1",
+  in: 1,
+  out: 1,
+ },
 } {
-	t.Run(test.name, func(t *testing.T) {
-		got := abs(test.in)
-		if got != test.out {
-			t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
-		}
-	})
+ t.Run(test.name, func(t *testing.T) {
+  got := abs(test.in)
+  if got != test.out {
+   t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
+  }
+ })
 }
 ```
 
