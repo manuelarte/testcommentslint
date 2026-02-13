@@ -75,10 +75,10 @@ tests := map[string]struct {
 }
 for name, test := range tests {
     t.Run(name, func(t *testing.T) {
-      got := abs(test.in)
-      if got != test.out {
-        t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
-      }
+		got := abs(test.in)
+		if got != test.out {
+			t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
+		}
     })
 }
 ```
@@ -87,20 +87,20 @@ for name, test := range tests {
 
 ```go
 for name, test := range map[string]struct {
-    in int
+	in int
     out int
 } {
     "test1": {
-  in: 1,
-  out: 1,
- },
+		in: 1, 
+		out: 1,
+	},
 } {
- t.Run(name, func(t *testing.T) {
-  got := abs(test.in)
-  if got != test.out {
-   t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
-  }
- })
+	t.Run(name, func(t *testing.T) {
+		got := abs(test.in)
+		if got != test.out {
+			t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
+		}
+	})
 }
 ```
 
@@ -108,12 +108,12 @@ for name, test := range map[string]struct {
 
 ```go
 tests := []struct {
- name string
-    in int
+	name string
+	in int
     out int
 } {
- {
-        name: "test1",
+	{
+		name: "test1",
         in: 1,
         out: 1,
     },
@@ -132,22 +132,22 @@ for _, test := range tests {
 
 ```go
 for _, test := range []struct {
-    name string
+	name string
     in int
     out int
 } {
- {
-  name: "test1",
-  in: 1,
-  out: 1,
- },
+	{
+		name: "test1", 
+		in: 1, 
+		out: 1,
+	},
 } {
- t.Run(test.name, func(t *testing.T) {
-  got := abs(test.in)
-  if got != test.out {
-   t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
-  }
- })
+	t.Run(test.name, func(t *testing.T) {
+		got := abs(test.in)
+		if got != test.out {
+			t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
+		}
+	})
 }
 ```
 
