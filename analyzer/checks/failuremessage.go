@@ -46,11 +46,14 @@ func (c FailureMessage) Check(pass *analysis.Pass, testFunc model.TestFunction) 
 				continue
 			}
 
-			// create an auxiliary testBlock struct that holds:
-			// - if statement
-			// - the t.Errorf call
-			// - the tested function previous to the if statement
-			testBlock, isTestBlock := model.NewTestPartBlock(testFunc.ImportGroup(), testVar, stmts[i-1], ifStmt)
+			// the statement should contain the tested function, unless the previous assignment is another if stmt
+			// that may contain another testing condition.
+			prev := stmts[i-1]
+			if _, prevIsIfStmt := prev.(*ast.IfStmt); prevIsIfStmt && i-2 > -1 {
+				prev = stmts[i-2]
+			}
+
+			testBlock, isTestBlock := model.NewTestPartBlock(testFunc.ImportGroup(), testVar, prev, ifStmt)
 			if !isTestBlock {
 				continue
 			}
