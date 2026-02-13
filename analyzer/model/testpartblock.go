@@ -99,15 +99,23 @@ func (t TestPartBlock) IsRecommendedFailureMessage() bool {
 	switch t.ifComparing.(type) {
 	case ComparingParamsIfStmt:
 		funName := t.testedFunc.FunctionName()
-		if selExpr, ok := t.testedFunc.CallExpr().Fun.(*ast.SelectorExpr); ok {
-			funName = selExpr.Sel.Name
-		}
 		quotedFunName := regexp.QuoteMeta(funName)
 		pattern := fmt.Sprintf(`^%s(?:|\(.*\)) = %%[^,]+, want %%[^,]+$`, quotedFunName)
 
 		matched, _ := regexp.MatchString(pattern, unquoted)
+		if matched {
+			return true
+		}
 
-		return matched
+		if selExpr, ok := t.testedFunc.CallExpr().Fun.(*ast.SelectorExpr); ok {
+			funName = selExpr.Sel.Name
+			quotedFunName = regexp.QuoteMeta(funName)
+			pattern = fmt.Sprintf(`^%s(?:|\(.*\)) = %%[^,]+, want %%[^,]+$`, quotedFunName)
+			matched, _ = regexp.MatchString(pattern, unquoted)
+			return matched
+		}
+
+		return false
 	case DiffIfStmt:
 		pattern := `(?:-want \+got|\(-want \+got\)):\n%s$`
 		matched, _ := regexp.MatchString(pattern, unquoted)
@@ -116,14 +124,22 @@ func (t TestPartBlock) IsRecommendedFailureMessage() bool {
 		}
 
 		funName := t.testedFunc.FunctionName()
-		if selExpr, ok := t.testedFunc.CallExpr().Fun.(*ast.SelectorExpr); ok {
-			funName = selExpr.Sel.Name
-		}
 		quotedFunName := regexp.QuoteMeta(funName)
 		pattern = fmt.Sprintf(`^%s mismatch (?:-want \+got|\(-want \+got\)):\n%%s$`, quotedFunName)
 		matched, _ = regexp.MatchString(pattern, unquoted)
+		if matched {
+			return true
+		}
 
-		return matched
+		if selExpr, ok := t.testedFunc.CallExpr().Fun.(*ast.SelectorExpr); ok {
+			funName = selExpr.Sel.Name
+			quotedFunName = regexp.QuoteMeta(funName)
+			pattern = fmt.Sprintf(`^%s mismatch (?:-want \+got|\(-want \+got\)):\n%%s$`, quotedFunName)
+			matched, _ = regexp.MatchString(pattern, unquoted)
+			return matched
+		}
+
+		return false
 	}
 
 	return true
