@@ -46,3 +46,12 @@ func TestPrintHelloWorld(t *testing.T) {
 		t.Errorf("got %v, want %v", got, want) // want `Prefer "printHelloWorld\(\) = %v, _, want %v" format for this failure message`
 	}
 }
+
+func TestPrintHelloWorldErrCheck(t *testing.T) {
+	t.Parallel()
+
+	_, err := printHelloWorld()
+	if err != nil {
+		t.Errorf("unexpected err: %v", err)
+	}
+}
