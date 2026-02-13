@@ -60,6 +60,53 @@ func TestIsRecommendedFailureMessage(t *testing.T) {
 			},
 			want: true,
 		},
+		"selector expr valid function, no parenthesis": {
+			testPartBlock: TestPartBlock{
+				testedFunc: TestedCallExpr{
+					callExpr: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X: &ast.Ident{
+								Name: "test",
+							},
+							Sel: &ast.Ident{
+								Name: "YourFunction",
+							},
+						},
+					},
+				},
+				tErrorCallExpr: TErrorfCallExpr{
+					failureMessage: "YourFunction = %v, want %v",
+				},
+				ifComparing: ComparingParamsIfStmt{},
+			},
+			want: true,
+		},
+		"two selector expr valid function, no parenthesis": {
+			testPartBlock: TestPartBlock{
+				testedFunc: TestedCallExpr{
+					callExpr: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X: &ast.SelectorExpr{
+								X: &ast.Ident{
+									Name: "test",
+								},
+								Sel: &ast.Ident{
+									Name: "mystruct",
+								},
+							},
+							Sel: &ast.Ident{
+								Name: "MyFunction",
+							},
+						},
+					},
+				},
+				tErrorCallExpr: TErrorfCallExpr{
+					failureMessage: "MyFunction = %v, want %v",
+				},
+				ifComparing: ComparingParamsIfStmt{},
+			},
+			want: true,
+		},
 		"different function name with zero parameter": {
 			testPartBlock: TestPartBlock{
 				testedFunc: TestedCallExpr{
