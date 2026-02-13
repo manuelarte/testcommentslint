@@ -112,12 +112,14 @@ func (t TestPartBlock) IsRecommendedFailureMessage() bool {
 			quotedFunName = regexp.QuoteMeta(funName)
 			pattern = fmt.Sprintf(`^%s(?:|\(.*\)) = %%[^,]+, want %%[^,]+$`, quotedFunName)
 			matched, _ = regexp.MatchString(pattern, unquoted)
+
 			return matched
 		}
 
 		return false
 	case DiffIfStmt:
 		pattern := `(?:-want \+got|\(-want \+got\)):\n%s$`
+
 		matched, _ := regexp.MatchString(pattern, unquoted)
 		if matched {
 			return true
@@ -126,6 +128,7 @@ func (t TestPartBlock) IsRecommendedFailureMessage() bool {
 		funName := t.testedFunc.FunctionName()
 		quotedFunName := regexp.QuoteMeta(funName)
 		pattern = fmt.Sprintf(`^%s mismatch (?:-want \+got|\(-want \+got\)):\n%%s$`, quotedFunName)
+
 		matched, _ = regexp.MatchString(pattern, unquoted)
 		if matched {
 			return true
@@ -136,6 +139,7 @@ func (t TestPartBlock) IsRecommendedFailureMessage() bool {
 			quotedFunName = regexp.QuoteMeta(funName)
 			pattern = fmt.Sprintf(`^%s mismatch (?:-want \+got|\(-want \+got\)):\n%%s$`, quotedFunName)
 			matched, _ = regexp.MatchString(pattern, unquoted)
+
 			return matched
 		}
 
