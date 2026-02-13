@@ -81,6 +81,27 @@ func TestIsRecommendedFailureMessage(t *testing.T) {
 			},
 			want: true,
 		},
+		"selector expr wrong selector function, no parenthesis": {
+			testPartBlock: TestPartBlock{
+				testedFunc: TestedCallExpr{
+					callExpr: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X: &ast.Ident{
+								Name: "test",
+							},
+							Sel: &ast.Ident{
+								Name: "YourFunction",
+							},
+						},
+					},
+				},
+				tErrorCallExpr: TErrorfCallExpr{
+					failureMessage: "x.YourFunction = %v, want %v",
+				},
+				ifComparing: ComparingParamsIfStmt{},
+			},
+			want: false,
+		},
 		"two selector expr valid function, no parenthesis": {
 			testPartBlock: TestPartBlock{
 				testedFunc: TestedCallExpr{
