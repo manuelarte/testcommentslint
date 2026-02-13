@@ -50,11 +50,6 @@ func NewIfComparingResult(
 		return nil, false
 	}
 
-	// teCallExpr, istErrorf := newTErrorfCallExpr(testVar, ifStmt.Body.List[0])
-	// if !istErrorf {
-	//	return gotWantIfStmt{}, false
-	//}
-
 	if ifStmt.Init == nil {
 		// case got != equal and !reflect.DeepEqual or !cmp.Equal
 		got, want, ok := getGotWantParams(importGroup, testedFunctionParams, ifStmt.Cond)
@@ -172,7 +167,11 @@ func getGotWantParams(
 		}
 
 		xIdent, isXIdent := isNotBlankIdent(node.X)
+
 		yIdent, isYIdent := isNotBlankIdent(node.Y)
+		if isYIdent && yIdent.Name == "nil" {
+			return nil, nil, false
+		}
 
 		for _, p := range testedFunctionParams {
 			if isXIdent && p.Name == xIdent.Name {
