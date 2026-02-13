@@ -53,7 +53,6 @@ func NewTErrorfCallExpr(testVar string, blStmts *ast.BlockStmt) (TErrorfCallExpr
 	params := make([]*ast.Ident, 0)
 
 	for i := 1; len(callExpr.Args) > i; i++ {
-		// TODO here we need to accept also selectorExpr that comes from the table driven tests
 		paramIdent, isParamIdent := callExpr.Args[i].(*ast.Ident)
 
 		_, isTestSelectorExpr := callExpr.Args[i].(*ast.SelectorExpr)

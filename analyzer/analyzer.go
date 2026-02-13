@@ -80,7 +80,6 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 		(*ast.FuncDecl)(nil),
 	}
 
-	// TODO
 	tbfCheck, err := checks.NewTableDrivenFormat(l.tableDrivenFormat.getTableDrivenFormatPredicate())
 	if err != nil {
 		return nil, fmt.Errorf("error creating table driven format checker: %w", err)
