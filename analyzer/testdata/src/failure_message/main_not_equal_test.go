@@ -37,7 +37,7 @@ func TestSumAndBool(t *testing.T) {
 	}
 }
 
-func TestPrintHelloWorld(t *testing.T) {
+func TestPrintHelloWorldValueCheck(t *testing.T) {
 	t.Parallel()
 
 	want := 10
@@ -54,4 +54,18 @@ func TestPrintHelloWorldErrCheck(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected err: %v", err)
 	}
+}
+
+func TestPrintHelloWorld(t *testing.T) {
+	t.Parallel()
+
+	want := 10
+	got, err := printHelloWorld()
+	if err != nil {
+		t.Errorf("unexpected err: %v", err)
+	}
+	if got != want {
+		t.Errorf("got %v, want %v", got, want) // want `Prefer "printHelloWorld\(\) = %v, %v, want %v" format for this failure message`
+	}
+
 }
