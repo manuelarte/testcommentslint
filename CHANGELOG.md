@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3](https://github.com/manuelarte/testcommentslint/compare/v0.0.2...v0.0.3) (2026-02-16)
+
+
+### Bug Fixes
+
+* split failure-message check ([#21](https://github.com/manuelarte/testcommentslint/issues/21)) ([f18f64a](https://github.com/manuelarte/testcommentslint/commit/f18f64a8d11faa9fff1c3008e1f08d85648c7118))
+* valid failure message when selector expr ([#15](https://github.com/manuelarte/testcommentslint/issues/15)) ([17cd106](https://github.com/manuelarte/testcommentslint/commit/17cd10685eaa2e99e25e5b23f4e37381ecdadcf9))
+
 ## [0.0.2](https://github.com/manuelarte/testcommentslint/compare/v0.0.1...v0.0.2) (2026-02-13)
 
 
