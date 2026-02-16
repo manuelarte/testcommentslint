@@ -20,15 +20,15 @@ type (
 		// funcDecl the original function declaration.
 		funcDecl *ast.FuncDecl
 
-		// tableDrivenInfo information about table-driven test, nil if not a table-driven test.
+		// tableDrivenInfo table-driven test information for this test function, nil if not a table-driven test.
 		tableDrivenInfo *TableDrivenInfo
 	}
 
 	// ImportGroup contains the imports that are important for the test.
 	ImportGroup struct {
-		// GoCmp import spec containing go-cmp package. Nil if go-cmp is not imported.
+		// GoCmp "go-cmp" import spec. Nil if "go-cmp" is not imported.
 		GoCmp *ast.ImportSpec
-		// Reflect import spec containing the "reflect" package. Nil if reflect is not imported.
+		// Reflect "reflect" import spec. Nil if "reflect" is not imported.
 		Reflect *ast.ImportSpec
 	}
 
@@ -97,6 +97,43 @@ func (t TestFunction) GetTestVar() string {
 
 func (t TestFunction) GetTableDrivenInfo() *TableDrivenInfo {
 	return t.tableDrivenInfo
+}
+
+// TestPartBlocks returns all the tested blocks of the test function.
+func (t TestFunction) TestPartBlocks() []TestPartBlock {
+	blStmt := t.GetActualTestBlockStmt()
+	testVar := t.GetTestVar()
+
+	toReturn := make([]TestPartBlock, 0)
+
+	var stmts []ast.Stmt
+	if blStmt != nil {
+		stmts = blStmt.List
+	}
+
+	for i, stmt := range stmts {
+		if ifStmt, ok := stmt.(*ast.IfStmt); ok {
+			if i == 0 {
+				continue
+			}
+
+			// the statement should contain the tested function, unless the previous assignment is another if stmt
+			// that may contain another testing condition.
+			prev := stmts[i-1]
+			if _, prevIsIfStmt := prev.(*ast.IfStmt); prevIsIfStmt && i-2 > -1 {
+				prev = stmts[i-2]
+			}
+
+			testBlock, isTestBlock := NewTestPartBlock(t.ImportGroup(), testVar, prev, ifStmt)
+			if !isTestBlock {
+				continue
+			}
+
+			toReturn = append(toReturn, testBlock)
+		}
+	}
+
+	return toReturn
 }
 
 func (i ImportGroup) ReflectImportName() (string, bool) {

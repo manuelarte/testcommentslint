@@ -121,7 +121,7 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 			}
 
 			if l.identifyFunction {
-				checks.NewFailureMessage().Check(pass, testFunc)
+				checks.NewIdentifyFunction().Check(pass, testFunc)
 			}
 		}
 	})
