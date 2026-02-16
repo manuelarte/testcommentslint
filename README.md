@@ -17,13 +17,16 @@ go install github.com/manuelarte/testcommentslint@latest
 And then use it with
 
 ```bash
-testcommentslint [-equality-comparison=true|false] [-failure-message=true|false] [-table-driven-format.type=map|slice] [-table-driven-format.inlined=true|false] ./...
+testcommentslint [-equality-comparison=true|false] [-got-before-want=true|false] [-identify-function=true|false]
+[-table-driven-format.type=map|slice] [-table-driven-format.inlined=true|false] ./...
 ```
 
 Parameters:
 
 - `equality-comparison`: `true|false` (default `true`) Checks `reflect.DeepEqual` can be replaced by newer `cmp.Equal`.
-- `failure-message`: `true|false` (default `true`) Check that the failure messages in `t.Errorf` follow the format expected.
+- `got-before-want`: `true|false` (default `true`) Check that output the actual value that the function returned before
+printing the value that was expected.
+- `identify-function`: `true|false` (default `true`) Check that the failure messages in `t.Errorf` contains the function name.
 - `table-driven-format.type`: `map|slice` (default ``) Check that the table-driven tests are either Map or Slice, empty to leave it as it is.
 - `table-driven-format.inlined`: `true|false` (default `false`) Check that the table-driven tests are inlined in the `for` loop.
 
@@ -46,18 +49,26 @@ For more use cases and examples, check [equality-comparison](analyzer/testdata/s
 > Suggested Fix can't be supported since it could potentially imply adding go-cmp dependency
 > and `reflect.DeepEqual` can't be directly replaced by `cmp.Equal` or `cmp.Diff`.
 
-### Failure Messages
-
-This feature tries to detect
-
-- [Got before Want](https://go.dev/wiki/TestComments#got-before-want).
-- [Identify The Function](https://go.dev/wiki/TestComments#identify-the-function).
+### [Got before Want](https://go.dev/wiki/TestComments#got-before-want)
 
 Test outputs should output the actual value that the function returned before printing the value that was expected.
-A usual format for printing test outputs is `YourFunc(%v) = %v, want %v`.
+So prefer failure messages like `YourFunc(%v) = %v, want %v` over `want: %v, got: %v`.
 
-For diffs, directionality is less apparent, and thus it is important to include a key to aid in interpreting the failure.
-See [Print Diffs](https://go.dev/wiki/TestComments#print-diffs).
+> [!NOTE]
+> Suggested Fix can't be supported since it would imply changing the original failure message.
+
+### [Identify The Function](https://go.dev/wiki/TestComments#identify-the-function)
+
+In most tests, failure messages should include the name of the function that failed, even though it seems obvious
+from the name of the test function.
+
+Prefer:
+
+`t.Errorf("YourFunc(%v) = %v, want %v", in, got, want)`
+
+and not:
+
+`t.Errorf("got %v, want %v", got, want)`
 
 > [!NOTE]
 > Suggested Fix may be supported.
