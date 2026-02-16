@@ -55,18 +55,21 @@ func (c IdentifyFunction) Check(pass *analysis.Pass, testFunc model.TestFunction
 
 // isRecommendedFailureMessage returns whether the failure message honors the expected format for comparison used.
 func isRecommendedFailureMessage(t model.TestPartBlock) bool {
-	currentFailureMessage, err := strconv.Unquote(t.TErrorCallExpr().FailureMessage())
+	currentFailureMessage := t.TErrorCallExpr().FailureMessage()
+	unquoted, err := strconv.Unquote(currentFailureMessage)
 	if err != nil {
-		return true
+		// It's not a string literal that can be unquoted, maybe a raw string literal.
+		// We'll check the content as is.
+		unquoted = currentFailureMessage
 	}
 
 	switch t.IfComparing().(type) {
 	case model.ComparingParamsIfStmt:
 		funName := t.TestedFunc().FunctionName()
-		return isRecommendedGotWantFailureMessage(funName, currentFailureMessage)
+		return isRecommendedGotWantFailureMessage(funName, unquoted)
 	case model.DiffIfStmt:
 		funName := t.TestedFunc().FunctionName()
-		return isRecommendedDiffFailureMessage(funName, currentFailureMessage)
+		return isRecommendedDiffFailureMessage(funName, unquoted)
 	}
 
 	return true
@@ -98,7 +101,8 @@ func expectedFailureMessage(t model.TestPartBlock) string {
 }
 
 func isRecommendedGotWantFailureMessage(functionName, failureMessage string) bool {
-	pattern := fmt.Sprintf(`^%s(?:|\(.*\)) = %%[^,]+, want %%[^,]+$`, functionName)
+	quotedFunctionName := regexp.QuoteMeta(functionName)
+	pattern := fmt.Sprintf(`^%s(?:|\(.*\)) = %%[^,]+, want %%[^,]+$`, quotedFunctionName)
 
 	matched, _ := regexp.MatchString(pattern, failureMessage)
 	if matched {
@@ -108,8 +112,9 @@ func isRecommendedGotWantFailureMessage(functionName, failureMessage string) boo
 	if strings.Contains(functionName, ".") {
 		splitted := strings.Split(functionName, ".")
 		funName := splitted[len(splitted)-1]
-		pattern = fmt.Sprintf(`^%s(?:|\(.*\)) = %%[^,]+, want %%[^,]+$`, funName)
-		matched, _ = regexp.MatchString(pattern, functionName)
+		quotedFunName := regexp.QuoteMeta(funName)
+		pattern = fmt.Sprintf(`^%s(?:|\(.*\)) = %%[^,]+, want %%[^,]+$`, quotedFunName)
+		matched, _ = regexp.MatchString(pattern, failureMessage)
 
 		return matched
 	}
@@ -125,9 +130,10 @@ func isRecommendedDiffFailureMessage(functionName, failureMessage string) bool {
 		return true
 	}
 
-	pattern = fmt.Sprintf(`^%s mismatch (?:-want \+got|\(-want \+got\)):\n%%s$`, functionName)
+	quotedFunctionName := regexp.QuoteMeta(functionName)
+	pattern = fmt.Sprintf(`^%s mismatch (?:-want \+got|\(-want \+got\)):\n%%s$`, quotedFunctionName)
 
-	matched, _ = regexp.MatchString(pattern, functionName)
+	matched, _ = regexp.MatchString(pattern, failureMessage)
 	if matched {
 		return true
 	}
@@ -135,8 +141,9 @@ func isRecommendedDiffFailureMessage(functionName, failureMessage string) bool {
 	if strings.Contains(functionName, ".") {
 		splitted := strings.Split(functionName, ".")
 		funName := splitted[len(splitted)-1]
-		pattern = fmt.Sprintf(`^%s mismatch (?:-want \+got|\(-want \+got\)):\n%%s$`, funName)
-		matched, _ = regexp.MatchString(pattern, functionName)
+		quotedFunName := regexp.QuoteMeta(funName)
+		pattern = fmt.Sprintf(`^%s mismatch (?:-want \+got|\(-want \+got\)):\n%%s$`, quotedFunName)
+		matched, _ = regexp.MatchString(pattern, failureMessage)
 
 		return matched
 	}
