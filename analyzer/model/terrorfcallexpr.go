@@ -71,3 +71,7 @@ func (t TErrorfCallExpr) CallExpr() *ast.CallExpr {
 func (t TErrorfCallExpr) FailureMessage() string {
 	return t.failureMessage
 }
+
+func (t TErrorfCallExpr) GetArgs() []ast.Expr {
+	return t.callExpr.Args[1:]
+}

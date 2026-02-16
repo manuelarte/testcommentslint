@@ -120,6 +120,10 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 				checks.NewEqualityComparison().Check(pass, testFunc)
 			}
 
+			if l.gotBeforeWant {
+				checks.NewGotBeforeWant().Check(pass, testFunc)
+			}
+
 			if l.identifyFunction {
 				checks.NewIdentifyFunction().Check(pass, testFunc)
 			}

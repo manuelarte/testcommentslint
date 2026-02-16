@@ -5,9 +5,6 @@ import (
 	"go/ast"
 	"regexp"
 	"strconv"
-	"strings"
-
-	"github.com/manuelarte/testcommentslint/analyzer/slicesutils"
 )
 
 // TestPartBlock is a struct that holds the typical testing block like:
@@ -58,33 +55,16 @@ func NewTestPartBlock(
 	}, true
 }
 
-func (t TestPartBlock) TErrorCallExpr() TErrorfCallExpr {
-	return t.tErrorCallExpr
+func (t TestPartBlock) TestedFunc() TestedCallExpr {
+	return t.testedFunc
 }
 
-func (t TestPartBlock) ExpectedFailureMessage() string {
-	in := strings.Join(slicesutils.Map(t.testedFunc.CallExpr().Args, func(in ast.Expr) string {
-		return "%v"
-	}), ", ")
+func (t TestPartBlock) IfComparing() IfComparing {
+	return t.ifComparing
+}
 
-	out := strings.Join(slicesutils.Map(t.testedFunc.Params(), func(in *ast.Ident) string {
-		if in.Name == "_" {
-			return "_"
-		}
-
-		return "%v"
-	}), ", ")
-
-	funcFailurePart := fmt.Sprintf("%s(%s) = %s", t.testedFunc.FunctionName(), in, out)
-
-	switch t.ifComparing.(type) {
-	case ComparingParamsIfStmt:
-		return fmt.Sprintf("Prefer \"%s, want %%v\" format for this failure message", funcFailurePart)
-	case DiffIfStmt:
-		return fmt.Sprintf("Prefer \"%s mismatch (-want +got):\\n%%s\" format for this failure message", funcFailurePart)
-	}
-
-	return ""
+func (t TestPartBlock) TErrorCallExpr() TErrorfCallExpr {
+	return t.tErrorCallExpr
 }
 
 // IsRecommendedFailureMessage returns whether the failure message honors the expected format for comparison used.
