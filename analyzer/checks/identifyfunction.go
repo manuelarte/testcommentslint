@@ -54,64 +54,19 @@ func (c IdentifyFunction) Check(pass *analysis.Pass, testFunc model.TestFunction
 }
 
 // isRecommendedFailureMessage returns whether the failure message honors the expected format for comparison used.
-// TODO: check that the function name is present, only that. Not that it contains got and want
 func isRecommendedFailureMessage(t model.TestPartBlock) bool {
-	currentFailureMessage := t.TErrorCallExpr().FailureMessage()
-
-	unquoted, err := strconv.Unquote(currentFailureMessage)
+	currentFailureMessage, err := strconv.Unquote(t.TErrorCallExpr().FailureMessage())
 	if err != nil {
-		unquoted = currentFailureMessage
+		return true
 	}
 
 	switch t.IfComparing().(type) {
 	case model.ComparingParamsIfStmt:
 		funName := t.TestedFunc().FunctionName()
-		//isRecommendedGotWantFailureMessage(funName, unquoted)
-		quotedFunName := regexp.QuoteMeta(funName)
-		pattern := fmt.Sprintf(`^%s(?:|\(.*\)) = %%[^,]+, want %%[^,]+$`, quotedFunName)
-
-		matched, _ := regexp.MatchString(pattern, unquoted)
-		if matched {
-			return true
-		}
-
-		if selExpr, ok := t.TestedFunc().CallExpr().Fun.(*ast.SelectorExpr); ok {
-			funName = selExpr.Sel.Name
-			quotedFunName = regexp.QuoteMeta(funName)
-			pattern = fmt.Sprintf(`^%s(?:|\(.*\)) = %%[^,]+, want %%[^,]+$`, quotedFunName)
-			matched, _ = regexp.MatchString(pattern, unquoted)
-
-			return matched
-		}
-
-		return false
+		return isRecommendedGotWantFailureMessage(funName, currentFailureMessage)
 	case model.DiffIfStmt:
-		pattern := `(?:-want \+got|\(-want \+got\)):\n%s$`
-
-		matched, _ := regexp.MatchString(pattern, unquoted)
-		if matched {
-			return true
-		}
-
 		funName := t.TestedFunc().FunctionName()
-		quotedFunName := regexp.QuoteMeta(funName)
-		pattern = fmt.Sprintf(`^%s mismatch (?:-want \+got|\(-want \+got\)):\n%%s$`, quotedFunName)
-
-		matched, _ = regexp.MatchString(pattern, unquoted)
-		if matched {
-			return true
-		}
-
-		if selExpr, ok := t.TestedFunc().CallExpr().Fun.(*ast.SelectorExpr); ok {
-			funName = selExpr.Sel.Name
-			quotedFunName = regexp.QuoteMeta(funName)
-			pattern = fmt.Sprintf(`^%s mismatch (?:-want \+got|\(-want \+got\)):\n%%s$`, quotedFunName)
-			matched, _ = regexp.MatchString(pattern, unquoted)
-
-			return matched
-		}
-
-		return false
+		return isRecommendedDiffFailureMessage(funName, currentFailureMessage)
 	}
 
 	return true
