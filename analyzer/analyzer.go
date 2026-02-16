@@ -16,7 +16,8 @@ import (
 
 const (
 	EqualityComparisonCheckName       = "equality-comparison"
-	FailureMessageCheckName           = "failure-message"
+	GotBeforeWantCheck                = "got-before-want"
+	IdentifyTheFunctionCHeck          = "identify-function"
 	TableDrivenFormatCheckTypeName    = "table-driven-format.type"
 	TableDrivenFormatCheckInlinedName = "table-driven-format.inlined"
 )
@@ -34,8 +35,10 @@ func New() *analysis.Analyzer {
 
 	a.Flags.BoolVar(&l.equalityComparison, EqualityComparisonCheckName, true,
 		"Checks reflect.DeepEqual can be replaced by newer cmp.Equal.")
-	a.Flags.BoolVar(&l.failureMessage, FailureMessageCheckName, true,
-		"Check that the failure messages in t.Errorf follow the format expected.")
+	a.Flags.BoolVar(&l.gotBeforeWant, GotBeforeWantCheck, true,
+		"Check that output the actual value that the function returned before printing the value that was expected.")
+	a.Flags.BoolVar(&l.identifyFunction, IdentifyTheFunctionCHeck, true,
+		"Check that the failure messages in t.Errorf contains the function name.")
 	a.Flags.StringVar(&l.tableDrivenFormat.formatType, TableDrivenFormatCheckTypeName, "",
 		"Check that the table-driven tests are either Map or Slice.")
 	a.Flags.BoolVar(&l.tableDrivenFormat.inlined, TableDrivenFormatCheckInlinedName, false,
@@ -47,7 +50,8 @@ func New() *analysis.Analyzer {
 type (
 	testcommentslint struct {
 		equalityComparison bool
-		failureMessage     bool
+		gotBeforeWant      bool
+		identifyFunction   bool
 		tableDrivenFormat  tableDrivenFormat
 	}
 	tableDrivenFormat struct {
@@ -116,8 +120,12 @@ func (l *testcommentslint) run(pass *analysis.Pass) (any, error) {
 				checks.NewEqualityComparison().Check(pass, testFunc)
 			}
 
-			if l.failureMessage {
-				checks.NewFailureMessage().Check(pass, testFunc)
+			if l.gotBeforeWant {
+				checks.NewGotBeforeWant().Check(pass, testFunc)
+			}
+
+			if l.identifyFunction {
+				checks.NewIdentifyFunction().Check(pass, testFunc)
 			}
 		}
 	})

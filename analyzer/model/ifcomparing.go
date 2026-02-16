@@ -79,6 +79,14 @@ func (c ComparingParamsIfStmt) IfStmt() *ast.IfStmt {
 	return c.ifStmt
 }
 
+func (c ComparingParamsIfStmt) Got() *ast.Ident {
+	return c.got
+}
+
+func (c ComparingParamsIfStmt) Want() ast.Expr {
+	return c.want
+}
+
 func (d DiffIfStmt) IfStmt() *ast.IfStmt {
 	return d.ifStmt
 }

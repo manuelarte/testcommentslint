@@ -16,11 +16,19 @@ func TestAnalyzer(t *testing.T) {
 		"equality comparison": {
 			patterns: "equality_comparison",
 			options: map[string]string{
-				FailureMessageCheckName: "false",
+				IdentifyTheFunctionCHeck: "false",
 			},
 		},
-		"failure message": {
-			patterns: "failure_message",
+		"got before want": {
+			patterns: "got_before_want",
+			options: map[string]string{
+				EqualityComparisonCheckName: "false",
+				GotBeforeWantCheck:          "true",
+				IdentifyTheFunctionCHeck:    "false",
+			},
+		},
+		"identify function": {
+			patterns: "identify_function",
 			options: map[string]string{
 				EqualityComparisonCheckName: "false",
 			},

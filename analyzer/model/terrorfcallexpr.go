@@ -6,7 +6,6 @@ import "go/ast"
 type TErrorfCallExpr struct {
 	callExpr       *ast.CallExpr
 	failureMessage string
-	params         []*ast.Ident
 }
 
 // NewTErrorfCallExpr creates a tErrorfCallExpr after checking that the stmt is a call to t.Errorf.
@@ -50,23 +49,18 @@ func NewTErrorfCallExpr(testVar string, blStmts *ast.BlockStmt) (TErrorfCallExpr
 		return TErrorfCallExpr{}, false
 	}
 
-	params := make([]*ast.Ident, 0)
-
 	for i := 1; len(callExpr.Args) > i; i++ {
-		paramIdent, isParamIdent := callExpr.Args[i].(*ast.Ident)
+		_, isParamIdent := callExpr.Args[i].(*ast.Ident)
 
 		_, isTestSelectorExpr := callExpr.Args[i].(*ast.SelectorExpr)
 		if !isParamIdent && !isTestSelectorExpr {
 			return TErrorfCallExpr{}, false
 		}
-
-		params = append(params, paramIdent)
 	}
 
 	return TErrorfCallExpr{
 		callExpr:       callExpr,
 		failureMessage: basicLit.Value,
-		params:         params,
 	}, true
 }
 
@@ -78,6 +72,6 @@ func (t TErrorfCallExpr) FailureMessage() string {
 	return t.failureMessage
 }
 
-func (t TErrorfCallExpr) Params() []*ast.Ident {
-	return t.params
+func (t TErrorfCallExpr) GetArgs() []ast.Expr {
+	return t.callExpr.Args[1:]
 }
