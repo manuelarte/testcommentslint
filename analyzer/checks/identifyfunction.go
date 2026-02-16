@@ -1,8 +1,6 @@
 package checks
 
 import (
-	"fmt"
-	"go/ast"
 	"regexp"
 	"strconv"
 	"strings"
@@ -10,20 +8,9 @@ import (
 	"golang.org/x/tools/go/analysis"
 
 	"github.com/manuelarte/testcommentslint/analyzer/model"
-	"github.com/manuelarte/testcommentslint/analyzer/slicesutils"
 )
 
-// IdentifyFunction check that the failure messages in t.Errorf follow the format expected.
-// The format expected can be as the following:
-//   - When the condition is `reflect.DeepEqual`, `cmp.Equal` or `got != want`: "YourFunction(%v) = %v, want %v"
-//   - When the condition is `cmp.Diff`: YourFunction(%v) mismatch (-want +got):\n%s
-//
-// This checks blocks like the following:
-//
-//	 got := MyFunction(in)
-//		if got != want {
-//		  t.Errorf(...)
-//		}
+// IdentifyFunction check that the failure messages in t.Errorf/Fatalf contains the function name.
 type IdentifyFunction struct {
 	category string
 }
@@ -35,10 +22,10 @@ func NewIdentifyFunction() IdentifyFunction {
 	}
 }
 
-// Check checks that the failure messages in t.Errorf follow the format expected.
+// Check checks that the failure messages in t.Errorf/Fatalf follow the format expected.
 func (c IdentifyFunction) Check(pass *analysis.Pass, testFunc model.TestFunction) {
 	for _, testBlock := range testFunc.TestPartBlocks() {
-		if isRecommendedFailureMessage(testBlock) {
+		if containsFunctionName(testBlock) {
 			continue
 		}
 
@@ -46,16 +33,17 @@ func (c IdentifyFunction) Check(pass *analysis.Pass, testFunc model.TestFunction
 			Pos:      testBlock.TErrorCallExpr().CallExpr().Pos(),
 			End:      testBlock.TErrorCallExpr().CallExpr().End(),
 			Category: c.category,
-			Message:  expectedFailureMessage(testBlock),
+			Message:  "Failure messages should include the name of the function that failed",
 			URL:      "https://github.com/manuelarte/testcommentslint/tree/main?tab=readme-ov-file#identify-the-function",
 		}
 		pass.Report(diag)
 	}
 }
 
-// isRecommendedFailureMessage returns whether the failure message honors the expected format for comparison used.
-func isRecommendedFailureMessage(t model.TestPartBlock) bool {
+// containsFunctionName returns whether the failure message contains the function name.
+func containsFunctionName(t model.TestPartBlock) bool {
 	currentFailureMessage := t.TErrorCallExpr().FailureMessage()
+
 	unquoted, err := strconv.Unquote(currentFailureMessage)
 	if err != nil {
 		// It's not a string literal that can be unquoted, maybe a raw string literal.
@@ -63,89 +51,38 @@ func isRecommendedFailureMessage(t model.TestPartBlock) bool {
 		unquoted = currentFailureMessage
 	}
 
-	switch t.IfComparing().(type) {
-	case model.ComparingParamsIfStmt:
-		funName := t.TestedFunc().FunctionName()
-		return isRecommendedGotWantFailureMessage(funName, unquoted)
-	case model.DiffIfStmt:
-		funName := t.TestedFunc().FunctionName()
-		return isRecommendedDiffFailureMessage(funName, unquoted)
-	}
+	funName := t.TestedFunc().FunctionName()
 
-	return true
+	return containsFunctionNameString(funName, unquoted)
 }
 
-func expectedFailureMessage(t model.TestPartBlock) string {
-	in := strings.Join(slicesutils.Map(t.TestedFunc().CallExpr().Args, func(in ast.Expr) string {
-		return "%v"
-	}), ", ")
+func containsFunctionNameString(functionName, failureMessage string) bool {
+	// Extract the last part of the function name (in case it's a selector expression like "test.YourFunction")
+	parts := strings.Split(functionName, ".")
+	lastFunctionName := parts[len(parts)-1]
 
-	out := strings.Join(slicesutils.Map(t.TestedFunc().Params(), func(in *ast.Ident) string {
-		if in.Name == "_" {
-			return "_"
+	// Check if the failure message contains the full function name
+	if strings.Contains(failureMessage, functionName) {
+		return true
+	}
+
+	// Check if the failure message contains just the last part
+	if strings.Contains(failureMessage, lastFunctionName) {
+		// If the function name has multiple parts (has a selector), we need to be more careful
+		// We should reject if there's a different selector in the message
+		if len(parts) > 1 {
+			// Check if there's a selector expression in the message
+			// Pattern: something.lastFunctionName where something is not the expected selector
+			pattern := `\w+\.` + regexp.QuoteMeta(lastFunctionName)
+			if matched, _ := regexp.MatchString(pattern, failureMessage); matched {
+				// There's a selector expression in the message, check if it matches the expected one
+				expectedPrefix := strings.Join(parts[:len(parts)-1], ".")
+				// Check if the expected prefix is in the message
+				return strings.Contains(failureMessage, expectedPrefix+"."+lastFunctionName)
+			}
 		}
 
-		return "%v"
-	}), ", ")
-
-	funcFailurePart := fmt.Sprintf("%s(%s) = %s", t.TestedFunc().FunctionName(), in, out)
-
-	switch t.IfComparing().(type) {
-	case model.ComparingParamsIfStmt:
-		return fmt.Sprintf("Prefer \"%s, want %%v\" format for this failure message", funcFailurePart)
-	case model.DiffIfStmt:
-		return fmt.Sprintf("Prefer \"%s mismatch (-want +got):\\n%%s\" format for this failure message", funcFailurePart)
-	}
-
-	return ""
-}
-
-func isRecommendedGotWantFailureMessage(functionName, failureMessage string) bool {
-	quotedFunctionName := regexp.QuoteMeta(functionName)
-	pattern := fmt.Sprintf(`^%s(?:|\(.*\)) = %%[^,]+, want %%[^,]+$`, quotedFunctionName)
-
-	matched, _ := regexp.MatchString(pattern, failureMessage)
-	if matched {
 		return true
-	}
-
-	if strings.Contains(functionName, ".") {
-		splitted := strings.Split(functionName, ".")
-		funName := splitted[len(splitted)-1]
-		quotedFunName := regexp.QuoteMeta(funName)
-		pattern = fmt.Sprintf(`^%s(?:|\(.*\)) = %%[^,]+, want %%[^,]+$`, quotedFunName)
-		matched, _ = regexp.MatchString(pattern, failureMessage)
-
-		return matched
-	}
-
-	return false
-}
-
-func isRecommendedDiffFailureMessage(functionName, failureMessage string) bool {
-	pattern := `(?:-want \+got|\(-want \+got\)):\n%s$`
-
-	matched, _ := regexp.MatchString(pattern, failureMessage)
-	if matched {
-		return true
-	}
-
-	quotedFunctionName := regexp.QuoteMeta(functionName)
-	pattern = fmt.Sprintf(`^%s mismatch (?:-want \+got|\(-want \+got\)):\n%%s$`, quotedFunctionName)
-
-	matched, _ = regexp.MatchString(pattern, failureMessage)
-	if matched {
-		return true
-	}
-
-	if strings.Contains(functionName, ".") {
-		splitted := strings.Split(functionName, ".")
-		funName := splitted[len(splitted)-1]
-		quotedFunName := regexp.QuoteMeta(funName)
-		pattern = fmt.Sprintf(`^%s mismatch (?:-want \+got|\(-want \+got\)):\n%%s$`, quotedFunName)
-		matched, _ = regexp.MatchString(pattern, failureMessage)
-
-		return matched
 	}
 
 	return false

@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestIsRecommendedGotWantFailureMessage(t *testing.T) {
+func TestContainsFunctionNameString(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -32,6 +32,11 @@ func TestIsRecommendedGotWantFailureMessage(t *testing.T) {
 			failureMessage: "YourFunction = %v, want %v",
 			want:           true,
 		},
+		"selector expr complete function, no parenthesis": {
+			functionName:   "test.YourFunction",
+			failureMessage: "test.YourFunction = %v, want %v",
+			want:           true,
+		},
 		"selector expr wrong selector function, no parenthesis": {
 			functionName:   "test.YourFunction",
 			failureMessage: "x.YourFunction = %v, want %v",
@@ -39,7 +44,12 @@ func TestIsRecommendedGotWantFailureMessage(t *testing.T) {
 		},
 		"two selector expr valid function, no parenthesis": {
 			functionName:   "test.mystruct.YourFunction",
-			failureMessage: "MyFunction = %v, want %v",
+			failureMessage: "YourFunction = %v, want %v",
+			want:           true,
+		},
+		"two selector expr complete function, no parenthesis": {
+			functionName:   "test.mystruct.YourFunction",
+			failureMessage: "test.mystruct.YourFunction = %v, want %v",
 			want:           true,
 		},
 		"different function name with zero parameter": {
@@ -62,50 +72,9 @@ func TestIsRecommendedGotWantFailureMessage(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got := isRecommendedGotWantFailureMessage(tc.functionName, tc.failureMessage)
+			got := containsFunctionNameString(tc.functionName, tc.failureMessage)
 			if got != tc.want {
 				t.Errorf("isRecommendedGotWantFailureMessage = %t, want %t", got, tc.want)
-			}
-		})
-	}
-}
-
-func TestIsRecommendedDiffFailureMessage(t *testing.T) {
-	t.Parallel()
-
-	tests := map[string]struct {
-		functionName   string
-		failureMessage string
-		want           bool
-	}{
-		"diff, expecting -want +got:\\n%s": {
-			functionName:   "YourFunction",
-			failureMessage: "diff: %s",
-			want:           false,
-		},
-		"diff with function name, with (-want +got):\\n%s": {
-			functionName:   "YourFunction",
-			failureMessage: "YourFunction mismatch (-want +got):\n%s",
-			want:           true,
-		},
-		"diff with function name, with -want +got:\\n%s": {
-			functionName:   "YourFunction",
-			failureMessage: "YourFunction mismatch -want +got:\n%s",
-			want:           true,
-		},
-		"diff without function name, with -want +got:\\n%s": {
-			functionName:   "YourFunction",
-			failureMessage: "diff -want +got:\n%s",
-			want:           true,
-		},
-	}
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			got := isRecommendedDiffFailureMessage(tc.functionName, tc.failureMessage)
-			if got != tc.want {
-				t.Errorf("isRecommendedDiffFailureMessage = %t, want %t", got, tc.want)
 			}
 		})
 	}

@@ -5,11 +5,11 @@ import (
 )
 
 // TestPartBlock is a struct that holds the typical testing block like:
-// got := myFunction(in)	<- testedFunc
-// if got != want { 		<- ifComparing
 //
-//	  t.Errorf(...)			<- tErrorfCallExpr
-//	}.
+//	 	got := MyFunction(in)
+//		if got != want {
+//		  t.Errorf(...)
+//		}
 type TestPartBlock struct {
 	importGroup ImportGroup
 

@@ -23,7 +23,7 @@ func TestSum(t *testing.T) {
 	want := 2
 	got := double(1)
 	if got != want {
-		t.Errorf("got %v, want %v", got, want) // want `Prefer "double\(%v\) = %v, want %v" format for this failure message`
+		t.Errorf("got %v, want %v", got, want) // want `Failure messages should include the name of the function that failed`
 	}
 }
 
@@ -33,7 +33,7 @@ func TestSumAndBool(t *testing.T) {
 	want := 2
 	got, _ := sumAndBool(1, 1)
 	if got != want {
-		t.Errorf("got %v, want %v", got, want) // want `Prefer "sumAndBool\(%v, %v\) = %v, _, want %v" format for this failure message`
+		t.Errorf("got %v, want %v", got, want) // want `Failure messages should include the name of the function that failed`
 	}
 }
 
@@ -43,7 +43,7 @@ func TestPrintHelloWorldValueCheck(t *testing.T) {
 	want := 10
 	got, _ := printHelloWorld()
 	if got != want {
-		t.Errorf("got %v, want %v", got, want) // want `Prefer "printHelloWorld\(\) = %v, _, want %v" format for this failure message`
+		t.Errorf("got %v, want %v", got, want) // want `Failure messages should include the name of the function that failed`
 	}
 }
 
@@ -65,7 +65,7 @@ func TestPrintHelloWorld(t *testing.T) {
 		t.Errorf("unexpected err: %v", err)
 	}
 	if got != want {
-		t.Errorf("got %v, want %v", got, want) // want `Prefer "printHelloWorld\(\) = %v, %v, want %v" format for this failure message`
+		t.Errorf("got %v, want %v", got, want) // want `Failure messages should include the name of the function that failed`
 	}
 
 }
