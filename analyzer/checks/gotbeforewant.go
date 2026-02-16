@@ -42,7 +42,7 @@ func (c GotBeforeWant) Check(pass *analysis.Pass, testFunc model.TestFunction) {
 				continue
 			}
 
-			if isSame(want, arg) {
+			if isSameVariable(want, arg) {
 				wantIndex = i
 
 				continue
@@ -65,7 +65,7 @@ func (c GotBeforeWant) Check(pass *analysis.Pass, testFunc model.TestFunction) {
 	}
 }
 
-func isSame(a, b ast.Expr) bool {
+func isSameVariable(a, b ast.Expr) bool {
 	switch nodeA := a.(type) {
 	case *ast.Ident:
 		if nodeB, isIdent := b.(*ast.Ident); isIdent && nodeA.Name == nodeB.Name {
@@ -77,7 +77,7 @@ func isSame(a, b ast.Expr) bool {
 				return false
 			}
 
-			return isSame(nodeA.X, nodeB.X)
+			return isSameVariable(nodeA.X, nodeB.X)
 		}
 	}
 
