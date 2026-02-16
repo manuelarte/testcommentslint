@@ -36,11 +36,13 @@ printing the value that was expected.
 
 This linter detects the expression:
 
+<!-- markdownlint-disable -->
 ```go
 if !reflect.DeepEqual(got, want) {
     t.Errorf("MyFunction got %v, want %v", got, want)
 }
 ```
+<!-- markdownlint-enable -->
 
 And lint that the newer [`cmp.Equal`][cmp-equal] or [`cmp.Diff`][cmp-diff] should be used.
 For more use cases and examples, check [equality-comparison](analyzer/testdata/src/equality_comparison).
@@ -80,93 +82,101 @@ The options are:
 
 #### Map non-inlined
 
+<!-- markdownlint-disable -->
 ```go
 tests := map[string]struct {
-    in int
-    out int
+	in int
+	out int
 } {
-    "test1": {
-        in: 1,
-        out: 1,
-    },
+	"test1": {
+		in: 1,
+		out: 1,
+	},
 }
 for name, test := range tests {
-    t.Run(name, func(t *testing.T) {
-  got := abs(test.in)
-  if got != test.out {
-   t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
-  }
- })
+	t.Run(name, func(t *testing.T) {
+		got := abs(test.in)
+		if got != test.out {
+			t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
+		}
+	})
 }
 ```
+<!-- markdownlint-enable -->
 
 #### Map inlined
 
+<!-- markdownlint-disable -->
 ```go
 for name, test := range map[string]struct {
- in int
-    out int
+	in int
+	out int
 } {
-    "test1": {
-  in: 1,
-  out: 1,
- },
+	"test1": {
+		in: 1,
+		out: 1,
+	},
 } {
- t.Run(name, func(t *testing.T) {
-  got := abs(test.in)
-  if got != test.out {
-   t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
-  }
- })
+	t.Run(name, func(t *testing.T) {
+		got := abs(test.in)
+		if got != test.out {
+			t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
+		}
+	})
 }
 ```
+<!-- markdownlint-enable -->
 
 #### Slice non-inlined
 
+<!-- markdownlint-disable -->
 ```go
 tests := []struct {
- name string
- in int
-    out int
+	name string
+	in int
+	out int
 } {
- {
-  name: "test1",
-        in: 1,
-        out: 1,
-    },
+	{
+		name: "test1",
+		in: 1,
+		out: 1,
+	},
 }
 for _, test := range tests {
-    t.Run(test.name, func(t *testing.T) {
-        got := abs(test.in)
-        if got != test.out {
-            t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
-        }
- })
+	t.Run(test.name, func(t *testing.T) {
+		got := abs(test.in)
+		if got != test.out {
+			t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
+		}
+	})
 }
 ```
+<!-- markdownlint-enable -->
 
 #### Slice inlined
 
+<!-- markdownlint-disable -->
 ```go
 for _, test := range []struct {
- name string
-    in int
-    out int
+	name string
+	in int
+	out int
 } {
- {
-  name: "test1",
-  in: 1,
-  out: 1,
- },
+	{
+		name: "test1",
+		in: 1,
+		out: 1,
+	},
 } {
- t.Run(test.name, func(t *testing.T) {
-  got := abs(test.in)
-  if got != test.out {
-   t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
-  }
- })
+	t.Run(test.name, func(t *testing.T) {
+		got := abs(test.in)
+		if got != test.out {
+			t.Errorf("abs(%d) = %d, want %d", test.in, got, test.out)
+		}
+	})
 }
 ```
+<!-- markdownlint-enable -->
 
 [cmp-equal]: https://pkg.go.dev/github.com/google/go-cmp/cmp#Equal
 [cmp-diff]: https://pkg.go.dev/github.com/google/go-cmp/cmp#Diff
