@@ -42,11 +42,11 @@ by using the [module plugin](https://golangci-lint.run/docs/plugins/module-plugi
 Example of a `custom-gcl.yml` file that includes this linter:
 
 ```yaml
-version: v2.12.2
+version: v2.13.2
 plugins:
   - module: "github.com/manuelarte/testcomments"
     import: "github.com/manuelarte/testcomments/plugin"
-    version: v0.0.3
+    version: latest
 ```
 
 ## 🚀 Features
